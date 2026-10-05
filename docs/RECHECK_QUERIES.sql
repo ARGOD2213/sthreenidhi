@@ -16,8 +16,12 @@ WHERE TABLE_NAME LIKE '%SCHEDULE%' OR TABLE_NAME LIKE '%INSTAL%' OR TABLE_NAME L
 ORDER BY TABLE_NAME;
 
 -- 3. Which values does the loan status take, and how many loans each?
---    (replace SHG_MEMBER_LOAN with the loan table name used by the dashboard if it differs)
-SELECT LOAN_STATUS, COUNT(*) AS LOANS FROM SHG_MEMBER_LOAN GROUP BY LOAN_STATUS ORDER BY LOANS DESC;
+--    The dashboard table is SHG_MEMBER_MCP_INFO. The dashboard counts only OPEN and CLOSED,
+--    so any other status shown here is NOT in the dashboard today.
+SELECT LOAN_STATUS, COUNT(*) AS LOANS, SUM(LOAN_AMOUNT_ISSUED) AS AMOUNT_ISSUED
+FROM SHG_MEMBER_MCP_INFO WITH (NOLOCK)
+GROUP BY LOAN_STATUS
+ORDER BY LOANS DESC;
 
 -- 4. Where is the target stored, and how big are the values?
 SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
