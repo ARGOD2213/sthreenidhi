@@ -41,7 +41,7 @@
   <target name="war" depends="check-classes">
     <mkdir dir="${dist.dir}"/>
     <war destfile="build/sthreenidhi.war" webxml="WebContent/WEB-INF/web.xml" duplicate="fail">
-      <fileset dir="WebContent" excludes="WEB-INF/web.xml,WEB-INF/lib/**"/>
+      <fileset dir="WebContent" excludes="WEB-INF/web.xml,WEB-INF/lib/**,META-INF/MANIFEST.MF"/>
       <lib dir="WebContent/WEB-INF/lib"/>
       <classes dir="${classes.dir}"/>
     </war>
