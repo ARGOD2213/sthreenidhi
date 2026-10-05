@@ -360,6 +360,11 @@ public class CeoLoanIntelligenceDAOImpl implements CeoLoanIntelligenceDAO {
     }
 
     public ArrayList getMandalOverdueRollup() throws Exception {
+        return query("getMandalOverdueRollup", overdueSql(), new Object[0], refreshTimeout());
+    }
+
+    // package-visible so a test can look at the exact text
+    static String overdueSql() {
         String due = "ISNULL(S.LOAN_DUE, 0)", emi = "ISNULL(S.LOAN_EMI, 0)", bal = "ISNULL(S.OUTSTANDING, 0)";
         String b1 = due + " > 0 AND " + emi + " > 0 AND " + due + " <= " + emi;
         String b2 = due + " > 0 AND " + emi + " > 0 AND " + due + " > " + emi + " AND " + due + " <= 3 * " + emi;
@@ -383,7 +388,7 @@ public class CeoLoanIntelligenceDAOImpl implements CeoLoanIntelligenceDAO {
             " WHERE MCP.LOAN_STATUS = 'OPEN' AND S.IS_CLOSED = 0" +
             " AND" + loanQuality("MCP") + " AND" + geoFilter("VI") +
             " GROUP BY " + BY_MANDAL + " ORDER BY VI.DISTRICT_ID, VI.MANDAL_ID";
-        return query("getMandalOverdueRollup", sql, new Object[0], refreshTimeout());
+        return sql;
     }
 
     public ArrayList getMandalTargetRollup(String fyLabel) throws Exception {
