@@ -1,0 +1,124 @@
+REMOVE THE CEO DASHBOARD FROM AWFPREPORTS  (one step at a time)
+================================================================
+
+DO THIS ONLY AFTER the new link works and the numbers match:
+   https://serp.ap.gov.in/sthreenidhi/CeoLoanIntelligence?action=page
+
+NEVER delete AWFPREPORTS itself. We only remove the CEO part from it.
+Everything else (Struts, SGV, QueryTool, reports) stays.
+
+Why: while the CEO listener is still in AWFPREPORTS, it loads the same
+data from SNBSAP every 12 hours in addition to the new app.
+
+
+-----------------------------------------------------------------
+PART A - SWITCH IT OFF  (safe, easy to undo)  *** DO THIS FIRST ***
+-----------------------------------------------------------------
+Only web.xml changes. No Java file is deleted yet.
+
+STEP A1. Make a backup
+   Copy the whole AWFPREPORTS project folder (or at least
+   WebContent\WEB-INF\web.xml and the EAR you deploy now) to a
+   folder named  BACKUP_before_ceo_removal.
+   Do not skip this.
+
+STEP A2. Open  WebContent\WEB-INF\web.xml  in Eclipse
+   (right-click the file -> Open With -> Text Editor).
+
+STEP A3. Remove the LISTENER block (the most important one)
+   Search for:  CeoDashStartupListener
+   Delete the whole block:
+
+      <listener>
+        <listener-class>com.tcs.shg.ceo.listener.CeoDashStartupListener</listener-class>
+      </listener>
+
+STEP A4. Remove the SERVLET block
+   Search for:  CeoLoanIntelligenceServlet
+   Delete this block:
+
+      <servlet>
+        <servlet-name>CeoLoanIntelligenceServlet</servlet-name>
+        <servlet-class>com.tcs.shg.accounting.reqhandler.CeoLoanIntelligenceServlet</servlet-class>
+      </servlet>
+
+STEP A5. Remove the SERVLET-MAPPING block
+   Delete this block:
+
+      <servlet-mapping>
+        <servlet-name>CeoLoanIntelligenceServlet</servlet-name>
+        <url-pattern>/CeoLoanIntelligence</url-pattern>
+      </servlet-mapping>
+
+   Check: searching the file for  Ceo  now finds NOTHING.
+   (If anything is left, look at it before deleting it. Remove only
+   CEO things.)
+   Also check there is no <filter> or <filter-mapping> for the token
+   (DashboardTokenUtil / dashboard token). If there is, remove it too.
+
+STEP A6. Open  AWFP_ConfigDetails.xml  (FrontServlet config)
+   Remove the CEO entries (they may appear TWICE - remove all copies):
+
+      <handler>
+        <request-name>CeoLoanIntelligenceRH</request-name>
+        <handler-class>com.tcs.shg.accounting.reqhandler.CeoLoanIntelligenceRH</handler-class>
+      </handler>
+
+      <page>
+        <page-name>CeoLoanIntelligence</page-name>
+        <page-path>/accounting/CeoLoanIntelligence.jsp</page-path>
+        <page-type>local</page-type>
+      </page>
+
+STEP A7. Save both files, then rebuild AWFPREPORTS the same way you
+   always do (clean build -> EAR) and redeploy it.
+
+STEP A8. Check server.log after the restart
+   - NO line with  [CEO-DASH]  should come from AWFPREPORTS any more
+     (lines from sthreenidhi are fine).
+   - Open an ordinary AWFPREPORTS page (login, a report). It must work.
+   - Open  https://serp.ap.gov.in/AWFPREPORTS/CeoLoanIntelligence?action=page
+     It should now show 404 / not found. That is correct.
+   - Open  https://serp.ap.gov.in/sthreenidhi/CeoLoanIntelligence?action=page
+     It must still work.
+
+If anything breaks: put the backup web.xml back and redeploy.
+
+
+-----------------------------------------------------------------
+PART B - DELETE THE OLD FILES  (later, optional, after Part A has
+         run fine for a few days)
+-----------------------------------------------------------------
+Do this in Eclipse (right-click -> Delete), never by guessing.
+Delete ONLY these:
+
+   src/com/tcs/shg/accounting/DAO/CeoLoanIntelligenceDAO.java
+   src/com/tcs/shg/accounting/DAO/CeoLoanIntelligenceDAOImpl.java
+   src/com/tcs/shg/accounting/reqhandler/CeoLoanIntelligenceServlet.java
+   src/com/tcs/shg/accounting/reqhandler/CeoLoanIntelligenceRH.java
+   src/com/tcs/shg/ceo/            (the whole folder: bean, cache,
+                                    listener, service, util)
+   WebContent/accounting/CeoLoanIntelligence.jsp
+   WebContent/ceo-loan-intelligence/   (app.js, app.css)
+   DashboardTokenUtil.java  (the failed token class; wherever it is)
+
+BEFORE deleting any file, in Eclipse right-click it ->
+References -> Workspace. If any NON-CEO class uses it, do NOT delete
+it, and tell me the name.
+
+Do NOT delete:  QueryTool files, DBConnection.java, poi jars,
+                anything not listed above.
+
+After deleting: Project -> Clean, check the Problems tab shows 0
+errors, build the EAR, redeploy.
+
+
+-----------------------------------------------------------------
+PART C - CLEAN THE SERVER  (optional)
+-----------------------------------------------------------------
+The old saved snapshot file is no longer used:
+   <JBOSS>\server\<profile>\data\ceo-dash-snapshot.ser.gz
+It can be deleted (or kept; it does no harm). The new app uses its
+own file  sthreenidhi-ceo-snapshot.ser.gz  - DO NOT delete that one.
+
+Done.
