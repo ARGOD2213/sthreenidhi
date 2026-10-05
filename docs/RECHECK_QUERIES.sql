@@ -62,3 +62,34 @@ SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_NAME LIKE '%TARGET%' OR TABLE_NAME LIKE '%FY25%' OR TABLE_NAME LIKE '%FY26%' OR TABLE_NAME LIKE '%FY27%'
    OR TABLE_NAME LIKE '%2025_26%' OR TABLE_NAME LIKE '%2026_27%'
 ORDER BY TABLE_NAME;
+
+
+-- =====================  BATCH 3  (the DCB view was not found by name)  =====================
+-- Safe to run everything at once. Each query is independent: if one fails, the next still runs
+-- (run them as separate statements / result sets in the query tool).
+
+-- 11. Where do the overdue / demand objects really live (any schema), and what type are they?
+SELECT S.name AS SCHEMA_NAME, O.name AS OBJECT_NAME, O.type_desc, O.create_date, O.modify_date
+FROM sys.objects O
+JOIN sys.schemas S ON S.schema_id = O.schema_id
+WHERE O.name LIKE '%DCB%' OR O.name LIKE '%DEMAND_STATUS%' OR O.name LIKE '%OVER_DUES%' OR O.name LIKE '%OVERDUE%'
+ORDER BY O.name;
+
+-- 12. Same objects as INFORMATION_SCHEMA sees them (shows schema + table type)
+SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_NAME LIKE '%DCB%' OR TABLE_NAME LIKE '%DEMAND_STATUS%' OR TABLE_NAME LIKE '%OVER_DUES%'
+ORDER BY TABLE_NAME;
+
+-- 13. Does this login have permission to see view definitions?
+SELECT DB_NAME() AS DB, SUSER_NAME() AS LOGIN_NAME, USER_NAME() AS DB_USER,
+       HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'VIEW DEFINITION') AS CAN_VIEW_DEFINITION;
+
+-- 14. Sample rows without naming the schema (works if the object is reachable by the default schema)
+SELECT TOP 5 * FROM SHG_MEMBER_LOAN_DEMAND_STATUS WITH (NOLOCK);
+SELECT TOP 5 * FROM SHG_MEMBER_LOAN_STATUS_NEW WITH (NOLOCK);
+SELECT TOP 5 * FROM SHG_OVER_DUES WITH (NOLOCK);
+SELECT TOP 5 * FROM SHG_DEMAND_LEDGER WITH (NOLOCK);
+
+-- 15. Freshness of the demand-status table (is it current?)
+SELECT COUNT(*) AS ROWS_, MAX(OVERDUE_SINCE) AS LATEST_OVERDUE_SINCE FROM SHG_MEMBER_LOAN_DEMAND_STATUS WITH (NOLOCK);
+SELECT COUNT(*) AS ROWS_, MAX(DUE_DATE) AS LATEST_DUE_DATE FROM SHG_MEMBER_LOAN_STATUS_NEW WITH (NOLOCK);
