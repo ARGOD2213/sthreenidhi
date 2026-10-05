@@ -43,12 +43,9 @@ Result: `dist/sthreenidhi.ear`.
 
 The data source is bound as `java:/SNBSAP_DS`; the web app maps it through `resource-ref SNBSAP_DS`.
 
-## Still to copy in from the office
+## Not in the repo yet
 
-Replace these placeholders with the office files (same names and folders):
-
-- `WebContent/accounting/CeoLoanIntelligence.jsp`
-- `WebContent/scripts/app.js`
-- `WebContent/css/app.css`
-
-If the JSP or `app.js` contain `/AWFPREPORTS/`, change it to `request.getContextPath()`.
+- `WebContent/Assets/Images/emblem.png` - the header emblem. `app.js` asks for `/sthreenidhi/Assets/Images/emblem.png`;
+  without the file the page falls back to a plain mark (no error). Copy the office `Assets/Images` folder here if you want it.
+- The page also loads Google Fonts from the internet (`fonts.googleapis.com`); on a server network without
+  internet it simply uses system fonts.
