@@ -38,6 +38,9 @@ public interface CeoLoanIntelligenceDAO {
 
     ArrayList getRepaymentCube(String periodStart, String periodEnd) throws Exception;
 
+    // overdue (arrears) of today's open loans per mandal: from the daily-refreshed loan status table
+    ArrayList getMandalOverdueRollup() throws Exception;
+
     ArrayList drill(String group, String districtId, String mandalId, String voId, String shgId,
                     String periodStart, String periodEnd, String projectType) throws Exception;
 

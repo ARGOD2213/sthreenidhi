@@ -53,6 +53,18 @@ DISTRICTS.forEach(function (ds, di) {
 totals.activeMembers = districts.reduce(function (s, d) { return s + d.activeMembers; }, 0);
 purposes.push.apply(purposes, PURPOSES.map(function (p, pi) { var f = [.3, .25, .15, .1, .08, .07, .05][pi]; return { districtId: 'ALL', purpose: p, loanCount: Math.round(totals.loanCount * f), disbursed: Math.round(totals.disbursed * f), members: Math.round(totals.membersLoanSide * f) }; }));
 
+
+// overdue fields (mock numbers)
+function addOd(o, base, seed) { var r = rnd(hash(seed)), open = Math.round((base.openLoans || 1000) * 0.95), od = Math.round(open * (0.08 + r() * 0.08)), out = Math.round(open * 52000 * (0.8 + r() * 0.3)), amt = Math.round(od * 7000 * (0.7 + r() * 0.6));
+  var l1 = Math.round(od * 0.52), l2 = Math.round(od * 0.30), l3 = od - l1 - l2, a1 = Math.round(amt * 0.25), a2 = Math.round(amt * 0.30);
+  o.statusLoans = open; o.overdueLoans = od; o.overdueAmount = amt; o.outstanding = out; o.overdueOutstanding = Math.round(out * 0.085);
+  o.od1Loans = l1; o.od1Amount = a1; o.od2Loans = l2; o.od2Amount = a2; o.od3Loans = l3; o.od3Amount = amt - a1 - a2; }
+districts.forEach(function (d) { addOd(d, d, 'd' + d.id); });
+mandals.forEach(function (m) { addOd(m, m, 'm' + m.districtId + m.mandalId); });
+employees.forEach(function (e) { addOd(e, e, 'e' + e.userId); });
+['statusLoans','overdueLoans','overdueAmount','outstanding','overdueOutstanding','od1Loans','od1Amount','od2Loans','od2Amount','od3Loans','od3Amount'].forEach(function (k) { totals[k] = districts.reduce(function (s, d) { return s + d[k]; }, 0); });
+totals.overdueReady = 1;
+
 var boot = { ready: true, fyLabel: '2026-27', fyStart: '2026-04-01', fyEnd: '2027-04-01', builtAtMillis: Date.now() - 3600000, fyList: ['2026-27', '2025-26'], targetUnit: 'unconfirmed (likely crore)', totals: totals, districts: districts, months: months, monthly: monthly, daily: daily, projects: projects, purposes: purposes, mandals: mandals, employees: employees };
 
 // ---- drill: fake rows for any level ----

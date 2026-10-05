@@ -69,7 +69,8 @@
             new String[]{"id","name","slug","activeMembers","membersWithLoans","membersLoanSide",
                          "membersRepaySide","loanCount","disbursed","openLoans","closedLoans",
                          "repayTxns","repaid","repaidClosed","repaidUnprocessed","repaidAdjustment",
-                         "targetAmount"});
+                         "targetAmount",
+                         "overdueLoans","overdueAmount","outstanding","overdueOutstanding","statusLoans","od1Loans","od1Amount","od2Loans","od2Amount","od3Loans","od3Amount"});
         /* 24 trend months, oldest first */
         List months = (List) bootData.get("months");
         js.append(",\"months\":[");
@@ -116,11 +117,13 @@
             new String[]{"districtId","mandalId","name","loanCount","disbursed","openLoans","closedLoans",
                          "membersLoanSide","repayTxns","repaid",
                          "targetAmount","officerUserId","officerName","officerRole","agmUserId",
-                         "agmName","dgmUserId","dgmName"});
+                         "agmName","dgmUserId","dgmName",
+                         "overdueLoans","overdueAmount","outstanding","overdueOutstanding","statusLoans","od1Loans","od1Amount","od2Loans","od2Amount","od3Loans","od3Amount"});
         appendListOfMaps(js, "employees", (List) bootData.get("employees"),
             new String[]{"userId","empCode","officerName","officerRole","agmUserId","agmName",
                          "dgmUserId","dgmName","districtIds","mandalCount","loanCount","disbursed",
-                         "repayTxns","repaid","targetAmount"});
+                         "repayTxns","repaid","targetAmount",
+                         "overdueLoans","overdueAmount","outstanding","overdueOutstanding","statusLoans","od1Loans","od1Amount","od2Loans","od2Amount","od3Loans","od3Amount"});
     }
     js.append("}");
 %>

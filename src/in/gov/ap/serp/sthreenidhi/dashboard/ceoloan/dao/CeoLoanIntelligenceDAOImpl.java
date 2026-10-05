@@ -346,6 +346,46 @@ public class CeoLoanIntelligenceDAOImpl implements CeoLoanIntelligenceDAO {
         return query("getCashKeyedBy", sql, new Object[] { p[0], p[1] }, KEYED_TIMEOUT_SECONDS);
     }
 
+    /*
+     * Overdue = arrears in SN.SHG_MEMBER_LOAN_STATUS_NEW (one row per loan, refreshed daily by SNBSAP):
+     * LOAN_DUE = amount behind before this month's instalment, LOAN_EMI = the instalment, OUTSTANDING = balance.
+     * Same loans, same woman -> SHG -> VO geography and same quality rules as every other figure here.
+     * Bands by how many instalments the arrears equal: up to 1, 1 to 3, over 3 (or no instalment amount left).
+     */
+    private static final String STATUS_TABLE = statusTable();
+
+    private static String statusTable() {
+        String t = System.getProperty("ceo.dash.statusTable", "SN.SHG_MEMBER_LOAN_STATUS_NEW").trim();
+        return t.matches("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)?") ? t : "SN.SHG_MEMBER_LOAN_STATUS_NEW";
+    }
+
+    public ArrayList getMandalOverdueRollup() throws Exception {
+        String due = "ISNULL(S.LOAN_DUE, 0)", emi = "ISNULL(S.LOAN_EMI, 0)", bal = "ISNULL(S.OUTSTANDING, 0)";
+        String b1 = due + " > 0 AND " + emi + " > 0 AND " + due + " <= " + emi;
+        String b2 = due + " > 0 AND " + emi + " > 0 AND " + due + " > " + emi + " AND " + due + " <= 3 * " + emi;
+        String b3 = due + " > 0 AND (" + emi + " <= 0 OR " + due + " > 3 * " + emi + ")";
+        String sql =
+            "SELECT " + BY_MANDAL + "," +
+            " COUNT(*) AS STATUS_LOANS," +
+            " SUM(CASE WHEN " + due + " > 0 THEN 1 ELSE 0 END) AS OVERDUE_LOANS," +
+            " SUM(CASE WHEN " + due + " > 0 THEN " + due + " ELSE 0 END) AS OVERDUE_AMOUNT," +
+            " SUM(CASE WHEN " + bal + " > 0 THEN " + bal + " ELSE 0 END) AS OUTSTANDING_AMOUNT," +
+            " SUM(CASE WHEN " + due + " > 0 AND " + bal + " > 0 THEN " + bal + " ELSE 0 END) AS OVERDUE_OUTSTANDING," +
+            " SUM(CASE WHEN " + b1 + " THEN 1 ELSE 0 END) AS B1_LOANS," +
+            " SUM(CASE WHEN " + b1 + " THEN " + due + " ELSE 0 END) AS B1_AMOUNT," +
+            " SUM(CASE WHEN " + b2 + " THEN 1 ELSE 0 END) AS B2_LOANS," +
+            " SUM(CASE WHEN " + b2 + " THEN " + due + " ELSE 0 END) AS B2_AMOUNT," +
+            " SUM(CASE WHEN " + b3 + " THEN 1 ELSE 0 END) AS B3_LOANS," +
+            " SUM(CASE WHEN " + b3 + " THEN " + due + " ELSE 0 END) AS B3_AMOUNT" +
+            " FROM SHG_MEMBER_MCP_INFO MCP WITH (NOLOCK)" +
+            " INNER JOIN " + STATUS_TABLE + " S WITH (NOLOCK) ON S.SHG_MEMBER_LOAN_ACCNO = MCP.SHG_MEMBER_LOAN_ACCNO" +
+            MEMBER_JOIN + GEO_JOIN +
+            " WHERE MCP.LOAN_STATUS = 'OPEN' AND S.IS_CLOSED = 0" +
+            " AND" + loanQuality("MCP") + " AND" + geoFilter("VI") +
+            " GROUP BY " + BY_MANDAL + " ORDER BY VI.DISTRICT_ID, VI.MANDAL_ID";
+        return query("getMandalOverdueRollup", sql, new Object[0], refreshTimeout());
+    }
+
     public ArrayList getMandalTargetRollup(String fyLabel) throws Exception {
         String label = checkFyLabel(fyLabel);
         String sql =

@@ -68,6 +68,14 @@ public final class CeoDashboardSnapshotBuilder {
         ArrayList loanCube    = dao.getLoanCube(winStart, winEnd);
         ArrayList repayCube   = dao.getRepaymentCube(winStart, winEnd);
         ArrayList projNames   = dao.getProjectNames();
+        ArrayList overdueRows = new ArrayList();
+        boolean overdueOk = true;
+        try {
+            overdueRows = dao.getMandalOverdueRollup();
+        } catch (Exception e) {
+            overdueOk = false;
+            CeoLog.warn("Overdue figures not available (" + e.getMessage() + "); the dashboard runs without them");
+        }
 
         CeoDashCube cube = buildCube(winStart.substring(0, 7), winEnd.substring(0, 7), loanCube, repayCube, projNames);
         ArrayList loanMonths  = new ArrayList();
@@ -87,7 +95,9 @@ public final class CeoDashboardSnapshotBuilder {
         Map fyMandal = new HashMap();
         fyMandal.put(fyLabel, fyMandalFacts(mandalLoans, mandalTgt));
         fyMandal.put(prevLabel, fyMandalFacts(loansPrev, tgtPrev));
-        List mandals   = buildMandals(mandalDim, mandalLoans, mandalRepay, mandalTgt, mapping);
+        List mandals   = buildMandals(mandalDim, mandalLoans, mandalRepay, mandalTgt, mapping, overdueRows);
+        addOverdueToDistricts(districts, mandals);
+        addOverdueToTotals(totals, districts, overdueOk && overdueSane(districts));
         List employees = buildEmployees(mandals);
 
         CeoLog.info("Snapshot build done in " + (System.currentTimeMillis() - t0) + " ms:"
@@ -441,8 +451,9 @@ public final class CeoDashboardSnapshotBuilder {
     }
 
     private static List buildMandals(ArrayList dim, ArrayList loans, ArrayList repay,
-                                     ArrayList targets, ArrayList mapping) {
+                                     ArrayList targets, ArrayList mapping, ArrayList overdue) {
         Map loanBy  = index(loans);
+        Map overdueBy = index(overdue);
         Map repayBy = index(repay);
         Map tgtBy   = index(targets);
         Map mapBy   = new HashMap();
@@ -464,6 +475,7 @@ public final class CeoDashboardSnapshotBuilder {
             Map r = (Map) repayBy.get(k);
             Map t = (Map) tgtBy.get(k);
             Map o = (Map) mapBy.get(k);
+            Map od = (Map) overdueBy.get(k);
 
             Map m = new LinkedHashMap();
             m.put("districtId",   str(d.get("DISTRICT_ID")));
@@ -477,6 +489,11 @@ public final class CeoDashboardSnapshotBuilder {
             m.put("repayTxns",    r == null ? Long.valueOf(0) : lng(r.get("REPAYMENT_TXN_COUNT")));
             m.put("repaid",       r == null ? BigDecimal.ZERO : dec(r.get("REPAID_AMOUNT")));
             m.put("targetAmount", t == null ? BigDecimal.ZERO : dec(t.get("TARGET_AMOUNT")));
+            for (int f = 0; f < OVERDUE_FIELDS.length; f++) {
+                String[] x = OVERDUE_FIELDS[f];
+                m.put(x[0], "L".equals(x[2]) ? (Object) (od == null ? Long.valueOf(0) : lng(od.get(x[1])))
+                                             : (Object) (od == null ? BigDecimal.ZERO : dec(od.get(x[1]))));
+            }
             m.put("officerUserId",   o == null ? "" : str(o.get("OFFICER_USER_ID")));
             m.put("officerName",     o == null ? "" : str(o.get("OFFICER_NAME")));
             m.put("officerRole",     o == null ? "" : str(o.get("OFFICER_ROLE")));
@@ -488,6 +505,72 @@ public final class CeoDashboardSnapshotBuilder {
             out.add(m);
         }
         return out;
+    }
+
+    // snapshot field, query column, L = count / D = rupees
+    private static final String[][] OVERDUE_FIELDS = {
+        { "statusLoans",        "STATUS_LOANS",        "L" },
+        { "overdueLoans",       "OVERDUE_LOANS",       "L" },
+        { "overdueAmount",      "OVERDUE_AMOUNT",      "D" },
+        { "outstanding",        "OUTSTANDING_AMOUNT",  "D" },
+        { "overdueOutstanding", "OVERDUE_OUTSTANDING", "D" },
+        { "od1Loans",           "B1_LOANS",            "L" },
+        { "od1Amount",          "B1_AMOUNT",           "D" },
+        { "od2Loans",           "B2_LOANS",            "L" },
+        { "od2Amount",          "B2_AMOUNT",           "D" },
+        { "od3Loans",           "B3_LOANS",            "L" },
+        { "od3Amount",          "B3_AMOUNT",           "D" }
+    };
+
+    private static void addOverdueToDistricts(List districts, List mandals) {
+        Map byId = new HashMap();
+        for (int i = 0; i < districts.size(); i++) {
+            Map d = (Map) districts.get(i);
+            byId.put(d.get("id"), d);
+            zeroOverdue(d);
+        }
+        for (int i = 0; i < mandals.size(); i++) {
+            Map m = (Map) mandals.get(i);
+            Map d = (Map) byId.get(m.get("districtId"));
+            if (d == null) continue;
+            addOverdue(d, m);
+        }
+    }
+
+    private static void zeroOverdue(Map target) {
+        for (int f = 0; f < OVERDUE_FIELDS.length; f++) {
+            String[] x = OVERDUE_FIELDS[f];
+            target.put(x[0], "L".equals(x[2]) ? (Object) Long.valueOf(0) : (Object) BigDecimal.ZERO);
+        }
+    }
+
+    private static void addOverdue(Map target, Map from) {
+        for (int f = 0; f < OVERDUE_FIELDS.length; f++) {
+            String[] x = OVERDUE_FIELDS[f];
+            if ("L".equals(x[2])) incLong(target, x[0], ((Long) from.get(x[0])).longValue());
+            else                  incDec(target, x[0], (BigDecimal) from.get(x[0]));
+        }
+    }
+
+    // arrears can never exceed the balance, and loans in arrears can never exceed the open loans
+    private static boolean overdueSane(List districts) {
+        for (int i = 0; i < districts.size(); i++) {
+            Map d = (Map) districts.get(i);
+            long loans = ((Long) d.get("statusLoans")).longValue(), od = ((Long) d.get("overdueLoans")).longValue();
+            if (od > loans || ((BigDecimal) d.get("overdueAmount")).signum() < 0) {
+                CeoLog.warn("Overdue figures look wrong for district " + d.get("id") + " (" + od + " of " + loans + "); not shown");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static void addOverdueToTotals(Map totals, List districts, boolean ready) {
+        Map sum = new HashMap();
+        zeroOverdue(sum);
+        for (int i = 0; i < districts.size(); i++) addOverdue(sum, (Map) districts.get(i));
+        for (int f = 0; f < OVERDUE_FIELDS.length; f++) totals.put(OVERDUE_FIELDS[f][0], sum.get(OVERDUE_FIELDS[f][0]));
+        totals.put("overdueReady", Long.valueOf(ready && ((Long) sum.get("statusLoans")).longValue() > 0 ? 1 : 0));
     }
 
     private static List buildEmployees(List mandals) {
@@ -516,6 +599,7 @@ public final class CeoDashboardSnapshotBuilder {
                 e.put("repayTxns",   Long.valueOf(0));
                 e.put("repaid",      BigDecimal.ZERO);
                 e.put("targetAmount",BigDecimal.ZERO);
+                zeroOverdue(e);
                 byKey.put(key, e);
             }
             ((TreeSet) e.get("districtIds")).add(m.get("districtId"));
@@ -525,6 +609,7 @@ public final class CeoDashboardSnapshotBuilder {
             incDec(e, "disbursed",    (BigDecimal) m.get("disbursed"));
             incDec(e, "repaid",       (BigDecimal) m.get("repaid"));
             incDec(e, "targetAmount", (BigDecimal) m.get("targetAmount"));
+            addOverdue(e, m);
         }
         List out = new ArrayList();
         for (Iterator it = byKey.values().iterator(); it.hasNext();) {

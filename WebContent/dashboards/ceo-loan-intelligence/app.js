@@ -1261,6 +1261,18 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     return String(s || '').toLowerCase().replace(/(^|[\s(.\/-])([a-z])/g, function (m, p, c) { return p + c.toUpperCase(); });
   }
 
+  // overdue (arrears) of today's open loans; null when the server could not provide it
+  function overdueOf(src) {
+    if (CeoDash.data.OD_READY !== true || src.overdueAmount === undefined || src.overdueAmount === null) { return null; }
+    return {
+      open: num(src.statusLoans), loans: num(src.overdueLoans), amount: num(src.overdueAmount),
+      outstanding: num(src.outstanding), atRisk: num(src.overdueOutstanding),
+      bands: [ { loans: num(src.od1Loans), amount: num(src.od1Amount) },
+               { loans: num(src.od2Loans), amount: num(src.od2Amount) },
+               { loans: num(src.od3Loans), amount: num(src.od3Amount) } ]
+    };
+  }
+
   function realMetrics(src, monthly) {
     var target = num(src.targetAmount);
     var loans = num(src.loanCount), open = num(src.openLoans);
@@ -1268,7 +1280,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
       disbursed: num(src.disbursed),
       disbursedTarget: target > 0 ? target * TARGET_TO_RUPEES : NA,
       expectedRepayment: NA, receivedRepayment: num(src.repaid),
-      outstanding: NA, overdue: NA,
+      outstanding: NA, overdue: NA, od: overdueOf(src),
       cash: NA, online: NA, pos: NA, bank: NA,
       turnaroundDaysSum: NA, turnaroundDaysCount: 0,
       recoveryRateSum: NA, recoveryRateCount: 0,
@@ -1291,6 +1303,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
   }
 
   function buildFromBoot(boot) {
+    CeoDash.data.OD_READY = !!(boot.totals && Number(boot.totals.overdueReady) === 1);
     var periods = (boot.months || []).slice();
     var P = periods.length;
     var periodIdx = {};
@@ -3192,6 +3205,12 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
       '      <div class="circles-grid" id="ov-target-band"></div>' +
       '    </div>' +
 
+      '    <div id="ov-risk-wrap" style="display:none;">' +
+      '      <div class="rightPanel_heading">Loans at Risk (Overdue)</div>' +
+      '      <div class="rightPanel_sub_heading" id="ov-risk-sub"></div>' +
+      '      <div id="ov-risk"></div>' +
+      '    </div>' +
+
       '    <div>' +
       '      <div class="rightPanel_heading" id="ov-hl-title">Executive Highlights</div>' +
       '      <div class="rightPanel_sub_heading" id="ov-hl-sub"></div>' +
@@ -3363,6 +3382,46 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
       });
     }
 
+    // Loans at risk: arrears of today's open loans (not tied to the period picker)
+    function renderRisk(region) {
+      var wrap = document.getElementById('ov-risk-wrap'), box = document.getElementById('ov-risk'), sub = document.getElementById('ov-risk-sub');
+      if (!wrap || !box) { return; }
+      var od = region ? (region.metrics && region.metrics.od) : (data.org.metrics && data.org.metrics.od);
+      if (!od) { wrap.style.display = 'none'; return; }
+      wrap.style.display = '';
+      var scopeName = region ? region.name : 'Statewide';
+      var asOn = new Date(Number(data.builtAtMillis || 0));
+      sub.textContent = scopeName + ' \u00b7 as on ' + asOn.getDate() + ' ' + MONTH_NAMES[asOn.getMonth()] + ' ' + asOn.getFullYear() +
+        ' \u00b7 arrears = instalments not paid on time';
+      var cr = fmt.compactCr;
+      var pctLoans = od.open > 0 ? od.loans / od.open : NaN;
+      var par = od.outstanding > 0 ? od.atRisk / od.outstanding : NaN;
+      var names = ['Up to 1 instalment behind', '1 to 3 instalments behind', 'Over 3 instalments behind'];
+      var cols = ['#f59e0b', '#ea580c', '#dc2626'];
+      var total = od.bands[0].amount + od.bands[1].amount + od.bands[2].amount;
+      var bar = '', legend = '';
+      for (var i = 0; i < 3; i++) {
+        var w = total > 0 ? (od.bands[i].amount / total) * 100 : 0;
+        bar += '<span class="cd-risk-seg" style="width:' + w.toFixed(2) + '%;background:' + cols[i] + ';"></span>';
+        legend += '<div class="cd-risk-leg"><span class="cd-risk-dot" style="background:' + cols[i] + ';"></span>' +
+          '<span class="cd-risk-leg-name">' + names[i] + '</span>' +
+          '<span class="cd-risk-leg-val">' + fmt.number(od.bands[i].loans) + ' loans \u00b7 ' + cr(od.bands[i].amount) + '</span></div>';
+      }
+      box.innerHTML =
+        '<div class="cd-risk-kpis">' +
+        '  <div class="cd-risk-kpi cd-risk-kpi--red"><span class="cd-risk-k">Overdue amount</span><b>' + cr(od.amount) + '</b><i>behind schedule today</i></div>' +
+        '  <div class="cd-risk-kpi cd-risk-kpi--amber"><span class="cd-risk-k">Loans in arrears</span><b>' + fmt.number(od.loans) + '</b><i>' +
+              (fmt.missing(pctLoans) ? '' : fmt.percent(pctLoans, 1) + ' of ') + fmt.number(od.open) + ' open loans</i></div>' +
+        '  <div class="cd-risk-kpi cd-risk-kpi--violet"><span class="cd-risk-k">Balance at risk</span><b>' + cr(od.atRisk) + '</b><i>' +
+              (fmt.missing(par) ? '' : fmt.percent(par, 1) + ' of the outstanding') + '</i></div>' +
+        '  <div class="cd-risk-kpi cd-risk-kpi--blue"><span class="cd-risk-k">Total outstanding</span><b>' + cr(od.outstanding) + '</b><i>still to be repaid</i></div>' +
+        '</div>' +
+        (total > 0
+          ? '<div class="cd-risk-bandcard"><div class="cd-risk-bandtitle">How far behind (share of the overdue amount)</div>' +
+            '<div class="cd-risk-bar">' + bar + '</div><div class="cd-risk-legend">' + legend + '</div></div>'
+          : '<div class="cd-risk-none">No overdue loans here.</div>');
+    }
+
     function renderAll() {
       renderSubPicker();
       syncExplorerPeriod(); renderTopMandals();
@@ -3421,6 +3480,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
         }
       }
       renderModes();
+      renderRisk(S.scope === 'state' ? null : data.byId[S.districtId]);
       for (var i = 0; i < S.data.length; i++) {
         var dist = S.data[i];
         var pathEl = document.getElementById('dist-' + dist.id);

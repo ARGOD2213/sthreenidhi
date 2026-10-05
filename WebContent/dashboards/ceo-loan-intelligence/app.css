@@ -9955,3 +9955,24 @@ body, .cd-app-content { background: #eef2f6; }
 .cd-ex-table-wrap { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; }
 .cd-ex-table td { background: #ffffff; border-bottom: 1px solid #f1f5f9; }
 .cd-ex-table tr:last-child td { border-bottom: 0; }
+
+/* Overview: loans at risk (overdue) */
+.cd-risk-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1500px) { .cd-risk-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cd-risk-kpi { background: #ffffff; border: 1px solid #e2e8f0; border-top: 4px solid #cbd5e1; border-radius: 12px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(15, 23, 42, .04); min-width: 0; }
+.cd-risk-kpi--red { border-top-color: #dc2626; } .cd-risk-kpi--amber { border-top-color: #f59e0b; }
+.cd-risk-kpi--violet { border-top-color: #7c3aed; } .cd-risk-kpi--blue { border-top-color: #2563eb; }
+.cd-risk-k { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+.cd-risk-kpi b { display: block; font-size: 21px; font-weight: 800; margin: 4px 0 2px; color: #0f172a; font-variant-numeric: tabular-nums; }
+.cd-risk-kpi--red b { color: #b91c1c; } .cd-risk-kpi--amber b { color: #b45309; } .cd-risk-kpi--violet b { color: #6d28d9; } .cd-risk-kpi--blue b { color: #1d4ed8; }
+.cd-risk-kpi i { display: block; font-style: normal; font-size: 11.5px; color: #64748b; }
+.cd-risk-bandcard { margin-top: 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(15, 23, 42, .04); }
+.cd-risk-bandtitle { font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 10px; }
+.cd-risk-bar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: #f1f5f9; }
+.cd-risk-seg { display: block; height: 100%; }
+.cd-risk-legend { margin-top: 12px; display: grid; gap: 8px; }
+.cd-risk-leg { display: flex; align-items: center; font-size: 12.5px; color: #334155; }
+.cd-risk-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex: 0 0 10px; }
+.cd-risk-leg-name { flex: 1 1 auto; font-weight: 600; }
+.cd-risk-leg-val { flex: 0 0 auto; color: #475569; font-variant-numeric: tabular-nums; }
+.cd-risk-none { margin-top: 4px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 12px; padding: 14px 16px; font-weight: 600; }
