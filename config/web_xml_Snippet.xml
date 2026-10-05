@@ -1,0 +1,21 @@
+<!-- CEO Loan Intelligence Dashboard - Designed and architected by CHINTALA MAHINDRA -->
+<!-- ========================================================================== -->
+<!-- web.xml CONFIGURATION SNIPPET FOR CEO LOAN INTELLIGENCE PLATFORM           -->
+<!-- Copied from office PC web.xml (current files.txt).                         -->
+<!-- ========================================================================== -->
+
+<!-- 1. PRE-WARMING STARTUP LISTENER -->
+<listener>
+  <listener-class>com.tcs.shg.ceo.listener.CeoDashStartupListener</listener-class>
+</listener>
+
+<!-- 2. STANDALONE PUBLIC SERVLET (executive open link, no session) -->
+<servlet>
+  <servlet-name>CeoLoanIntelligenceServlet</servlet-name>
+  <servlet-class>com.tcs.shg.accounting.reqhandler.CeoLoanIntelligenceServlet</servlet-class>
+</servlet>
+
+<servlet-mapping>
+  <servlet-name>CeoLoanIntelligenceServlet</servlet-name>
+  <url-pattern>/CeoLoanIntelligence</url-pattern>
+</servlet-mapping>

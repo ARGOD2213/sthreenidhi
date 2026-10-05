@@ -1,0 +1,21 @@
+<!-- CEO Loan Intelligence Dashboard - Designed and architected by CHINTALA MAHINDRA -->
+<!-- ========================================================================== -->
+<!-- AWFP_ConfigDetails.xml - CEO Loan Intelligence entries (FrontServlet route) -->
+<!-- The public link uses CeoLoanIntelligenceServlet (web.xml) and does not     -->
+<!-- need these, but they mirror R55PublicRH and keep the RH route working.     -->
+<!-- Each block must appear exactly ONCE. The office file currently has the     -->
+<!-- handler twice - delete the extra copy.                                     -->
+<!-- ========================================================================== -->
+
+<!-- Under <request-handlers> -->
+<handler>
+  <request-name>CeoLoanIntelligenceRH</request-name>
+  <handler-class>com.tcs.shg.accounting.reqhandler.CeoLoanIntelligenceRH</handler-class>
+</handler>
+
+<!-- Under <page-map> -->
+<page>
+  <page-name>CeoLoanIntelligence</page-name>
+  <page-path>/accounting/CeoLoanIntelligence.jsp</page-path>
+  <page-type>local</page-type>
+</page>

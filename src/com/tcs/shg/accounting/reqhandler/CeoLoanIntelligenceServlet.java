@@ -1,0 +1,363 @@
+/*
+ * CEO Loan Intelligence Dashboard
+ * Public entry point for the CEO dashboard (no login, like QueryTool): serves the page
+ * and the JSON calls made by app.js.
+ *
+ * Designed and architected by CHINTALA MAHINDRA
+ */
+package com.tcs.shg.accounting.reqhandler;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.tcs.shg.accounting.DAO.CeoLoanIntelligenceDAO;
+import com.tcs.shg.accounting.DAO.CeoLoanIntelligenceDAOImpl;
+import com.tcs.shg.ceo.cache.CeoDashCache;
+import com.tcs.shg.ceo.cache.CeoDashCacheLoader;
+import com.tcs.shg.ceo.service.CeoDashboardService;
+import com.tcs.shg.ceo.service.CeoDashExport;
+import com.tcs.shg.ceo.util.CeoGzip;
+import com.tcs.shg.ceo.util.CeoLog;
+import com.tcs.shg.util.CommonUtility;
+
+public class CeoLoanIntelligenceServlet extends HttpServlet {
+    private static final long   serialVersionUID = 1L;
+    private static final String JSP_DASHBOARD    = "/accounting/CeoLoanIntelligence.jsp";
+
+    // a public URL must not be able to start rebuilds back to back
+    private static final long DEFAULT_MIN_REFRESH_GAP_SECONDS = 15L * 60L;
+
+    private CeoLoanIntelligenceDAO dao = new CeoLoanIntelligenceDAOImpl();
+
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        doPost(request, response);
+    }
+
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String action = CommonUtility.checkNullObj(request.getParameter("action")).trim();
+
+        // the Excel file goes out as it is; app.js / app.css are compressed once and kept in memory
+        if ("export".equals(action)) { handleExport(request, response); return; }
+        if ("asset".equals(action))  { handleAsset(request, response);  return; }
+
+        // the page and the JSON answers are collected and sent compressed
+        if (!CeoGzip.accepted(request)) { route(action, request, response); return; }
+        CeoGzip.Buffered out = new CeoGzip.Buffered(request, response);
+        route(action, request, out);
+        out.finish();
+    }
+
+    private void route(String action, HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        if ("getBorrowers".equals(action)) { handleGetBorrowers(request, response); return; }
+        if ("drill".equals(action))        { handleDrill(request, response);        return; }
+        if ("member".equals(action))       { handleMember(request, response);       return; }
+        if ("shg".equals(action))          { handleShg(request, response);          return; }
+        if ("trend".equals(action))        { handleTrend(request, response);        return; }
+        if ("keyedBy".equals(action))      { handleKeyedBy(request, response);      return; }
+        if ("status".equals(action))       { handleStatus(response);                return; }
+        if ("refresh".equals(action))      { handleRefresh(response);               return; }
+
+        handlePage(request, response);
+    }
+
+    private void handlePage(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        CeoLoanIntelligenceRH.prepareDashboardAttributes(request);
+        RequestDispatcher rd = request.getRequestDispatcher(JSP_DASHBOARD);
+        rd.forward(request, response);
+    }
+
+    private void handleGetBorrowers(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        String shgId = CommonUtility.checkNullObj(request.getParameter("shgId")).trim();
+        ArrayList rows;
+        try {
+            rows = service.shgMemberLoans(shgId);
+        } catch (Exception e) {
+            serviceError(response, e, "getBorrowers shgId=" + shgId);
+            return;
+        }
+
+        StringBuffer sb = new StringBuffer("[");
+        String currentMember = null;
+        boolean firstLoan = true;
+        for (int i = 0; i < rows.size(); i++) {
+            Map row = (Map) rows.get(i);
+            String memberId = str(row.get("MEMBER_ID"));
+
+            if (!memberId.equals(currentMember)) {
+                if (currentMember != null) sb.append("]},");
+                currentMember = memberId;
+                firstLoan = true;
+                sb.append("{\"id\":").append(jsStr(memberId))
+                  .append(",\"name\":").append(jsStr(row.get("MEMBER_NAME")))
+                  .append(",\"shgId\":").append(jsStr(shgId))
+                  .append(",\"loans\":[");
+            }
+
+            if (row.get("SHG_MEMBER_LOAN_ACCNO") == null) continue;
+            if (!firstLoan) sb.append(",");
+            firstLoan = false;
+
+            String loanStatus = str(row.get("LOAN_STATUS"));
+            String issued     = str(row.get("ISSUED_DATE"));
+            String projName   = str(row.get("PROJECT_NAME"));
+            sb.append("{\"id\":").append(jsStr(row.get("SHG_MEMBER_LOAN_ACCNO")))
+              .append(",\"shgLoanAccNo\":").append(jsStr(row.get("SHG_LOAN_ACCNO")))
+              .append(",\"type\":").append(jsStr(projName.length() > 0 ? projName : str(row.get("PROJECT_TYPE"))))
+              .append(",\"projectType\":").append(jsStr(row.get("PROJECT_TYPE")))
+              .append(",\"purpose\":").append(jsStr(row.get("PURPOSE")))
+              .append(",\"amount\":").append(jsNum(row.get("LOAN_AMOUNT_ISSUED")))
+              .append(",\"receivedRepayment\":").append(jsNum(row.get("REPAID_AMOUNT")))
+              .append(",\"repaymentTxns\":").append(jsNum(row.get("REPAYMENT_TXN_COUNT")))
+              .append(",\"lastRepaymentDate\":").append(jsStr(row.get("LAST_REPAYMENT_DATE")))
+              .append(",\"loanStatus\":").append(jsStr(loanStatus))
+              .append(",\"status\":").append(jsStr("CLOSED".equalsIgnoreCase(loanStatus) ? "cleared" : "active"))
+              .append(",\"issuedDate\":").append(jsStr(issued))
+              .append(",\"disbursedDate\":").append(jsStr(issued.length() >= 7 ? issued.substring(0, 7) : issued))
+              .append("}");
+        }
+        if (currentMember != null) sb.append("]}");
+        sb.append("]");
+        writeJson(response, sb.toString());
+    }
+
+    private final CeoDashboardService service = new CeoDashboardService(dao);
+
+    private void handleDrill(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            writeJson(response, service.drill(param(request, "group"), param(request, "districtId"),
+                    param(request, "mandalId"), param(request, "voId"), param(request, "shgId"),
+                    param(request, "from"), param(request, "to"), param(request, "project")));
+        } catch (Exception e) {
+            serviceError(response, e, "drill " + request.getQueryString());
+        }
+    }
+
+    private void handleMember(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            writeJson(response, service.member(param(request, "memberId")));
+        } catch (Exception e) {
+            serviceError(response, e, "member " + request.getQueryString());
+        }
+    }
+
+    private void handleShg(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            writeJson(response, service.shg(param(request, "shgId")));
+        } catch (Exception e) {
+            serviceError(response, e, "shg " + request.getQueryString());
+        }
+    }
+
+    private void handleTrend(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            writeJson(response, service.trend(param(request, "districtId"), param(request, "mandals")));
+        } catch (Exception e) {
+            serviceError(response, e, "trend");
+        }
+    }
+
+    private void handleKeyedBy(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            writeJson(response, service.cashKeyedBy(param(request, "from"), param(request, "to")));
+        } catch (Exception e) {
+            serviceError(response, e, "keyedBy");
+        }
+    }
+
+    // Excel (.xls) of what a page shows: kind=drill (same parameters as action=drill) or kind=employee (from, to)
+    private void handleExport(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            String kind = param(request, "kind"), from = param(request, "from"), to = param(request, "to");
+            byte[] xls;
+            String base;
+            if ("employee".equals(kind)) {
+                String json = service.drill("MANDAL", null, null, null, null, from, to, null);
+                xls = CeoDashExport.employees(json, CeoDashCache.get(), param(request, "label"));
+                base = "CEO_Employee_Performance";
+            } else {
+                String group = param(request, "group");
+                String json = service.drill(group, param(request, "districtId"), param(request, "mandalId"),
+                        param(request, "voId"), param(request, "shgId"), from, to, param(request, "project"));
+                xls = CeoDashExport.rows(json, param(request, "title"), param(request, "label"), group);
+                base = "CEO_" + group.replaceAll("[^A-Za-z]", "");
+            }
+            String stamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmm").format(new java.util.Date());
+            response.reset();
+            response.setContentType("application/vnd.ms-excel");
+            response.setHeader("Content-Disposition", "attachment; filename=" + base + "_" + stamp + ".xls");
+            response.setContentLength(xls.length);
+            response.getOutputStream().write(xls);
+            response.getOutputStream().flush();
+        } catch (Exception e) {
+            serviceError(response, e, "export");
+        }
+    }
+
+    private static final Map ASSETS = Collections.synchronizedMap(new HashMap());
+
+    // app.js and app.css; the JSP adds ?v=ASSET_VERSION, so a new release always gets a new copy
+    private void handleAsset(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String name = param(request, "name");
+        String path, type;
+        if ("app.js".equals(name))       { path = "/scripts/app.js"; type = "application/javascript;charset=UTF-8"; }
+        else if ("app.css".equals(name)) { path = "/css/app.css";    type = "text/css;charset=UTF-8"; }
+        else { response.sendError(HttpServletResponse.SC_NOT_FOUND); return; }
+
+        String key = name + "|" + param(request, "v");
+        byte[][] body = (byte[][]) ASSETS.get(key);
+        if (body == null) {
+            byte[] raw = readResource(path);
+            if (raw == null) { response.sendError(HttpServletResponse.SC_NOT_FOUND); return; }
+            body = new byte[][] { raw, CeoGzip.gzip(raw) };
+            if (ASSETS.size() > 20) ASSETS.clear();
+            ASSETS.put(key, body);
+        }
+        boolean gz = CeoGzip.accepted(request);
+        byte[] out = gz ? body[1] : body[0];
+        response.setContentType(type);
+        response.setHeader("Cache-Control", "public, max-age=2592000");
+        response.addHeader("Vary", "Accept-Encoding");
+        if (gz) response.setHeader("Content-Encoding", "gzip");
+        response.setContentLength(out.length);
+        response.getOutputStream().write(out);
+        response.getOutputStream().flush();
+    }
+
+    private byte[] readResource(String path) throws IOException {
+        InputStream in = getServletContext().getResourceAsStream(path);
+        if (in == null) return null;
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream(256 * 1024);
+            byte[] b = new byte[8192];
+            int n;
+            while ((n = in.read(b)) > 0) out.write(b, 0, n);
+            return out.toByteArray();
+        } finally {
+            in.close();
+        }
+    }
+
+    private static String param(HttpServletRequest request, String name) {
+        return CommonUtility.checkNullObj(request.getParameter(name)).trim();
+    }
+
+    // not ready / busy -> 503, bad input -> 400, anything else -> 500 (details in the server log only)
+    private void serviceError(HttpServletResponse response, Exception e, String what) throws IOException {
+        if (e instanceof CeoDashboardService.NotReadyException || e instanceof CeoDashboardService.BusyException) {
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            writeJson(response, "{\"status\":\"error\",\"message\":\"" + escJson(e.getMessage()) + "\"}");
+        } else if (e instanceof IllegalArgumentException) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            writeJson(response, "{\"status\":\"error\",\"message\":\"" + escJson(e.getMessage()) + "\"}");
+        } else {
+            CeoLog.error(what + " failed", e);
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            writeJson(response, "{\"status\":\"error\",\"message\":\"Unable to load this level.\"}");
+        }
+    }
+    private void handleStatus(HttpServletResponse response) throws IOException {
+        response.setContentType("text/plain;charset=UTF-8");
+        StringBuffer sb = new StringBuffer();
+        sb.append("ready=").append(CeoDashCache.isReady()).append('\n');
+        sb.append("loading=").append(CeoDashCache.isLoading()).append('\n');
+        sb.append("lastAttemptMillis=").append(CeoDashCache.getLastAttemptMillis()).append('\n');
+        sb.append("lastSuccessMillis=").append(CeoDashCache.getLastSuccessMillis()).append('\n');
+        sb.append("lastError=").append(CeoDashCache.getLastError()).append('\n');
+        response.getWriter().write(sb.toString());
+    }
+
+    private void handleRefresh(HttpServletResponse response) throws IOException {
+        if (CeoDashCache.isLoading()) {
+            writeJson(response, "{\"status\":\"busy\",\"message\":\"A refresh is already running.\"}");
+            return;
+        }
+        long gapMs = minRefreshGapSeconds() * 1000L;
+        long since = System.currentTimeMillis() - CeoDashCache.getLastAttemptMillis();
+        if (CeoDashCache.getLastAttemptMillis() > 0 && since < gapMs) {
+            long waitSec = (gapMs - since) / 1000L + 1;
+            writeJson(response, "{\"status\":\"skipped\",\"message\":\"Last refresh was recent. Try again in "
+                    + waitSec + " seconds.\"}");
+            return;
+        }
+        CeoLog.info("CeoLoanIntelligenceServlet: manual refresh requested");
+        Thread t = new Thread(new Runnable() {
+            public void run() { CeoDashCacheLoader.loadNow(); }
+        }, "CeoDash-ManualRefresh");
+        t.setDaemon(true);
+        t.start();
+        writeJson(response, "{\"status\":\"started\",\"message\":\"Refresh started. Check action=status.\"}");
+    }
+
+    private static long minRefreshGapSeconds() {
+        String p = System.getProperty("ceo.dash.refresh.min.seconds");
+        if (p == null || p.trim().length() == 0) return DEFAULT_MIN_REFRESH_GAP_SECONDS;
+        try { return Long.parseLong(p.trim()); }
+        catch (Exception e) { return DEFAULT_MIN_REFRESH_GAP_SECONDS; }
+    }
+
+    private void writeJson(HttpServletResponse response, String json) throws IOException {
+        response.setContentType("application/json;charset=UTF-8");
+        response.setHeader("Cache-Control", "no-cache");
+        response.getWriter().write(json);
+    }
+
+    private static String str(Object o) {
+        return o == null ? "" : o.toString();
+    }
+
+    private static String jsStr(Object o) {
+        return o == null ? "null" : "\"" + escJson(o.toString()) + "\"";
+    }
+
+    private static String jsNum(Object o) {
+        if (o == null) return "null";
+        if (o instanceof BigDecimal) return ((BigDecimal) o).toPlainString();
+        if (o instanceof Number) return o.toString();
+        return "null";
+    }
+
+    private static String escJson(String s) {
+        if (s == null) return "";
+        StringBuilder sb = new StringBuilder(s.length() + 16);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\\': sb.append("\\\\"); break;
+                case '"':  sb.append("\\\""); break;
+                case '\b': sb.append("\\b");  break;
+                case '\f': sb.append("\\f");  break;
+                case '\n': sb.append("\\n");  break;
+                case '\r': sb.append("\\r");  break;
+                case '\t': sb.append("\\t");  break;
+                case '<':  sb.append("\\u003c"); break;
+                default:
+                    if (c < 0x20) {
+                        String hex = Integer.toHexString(c);
+                        sb.append("\\u00");
+                        if (hex.length() < 2) sb.append('0');
+                        sb.append(hex);
+                    } else {
+                        sb.append(c);
+                    }
+            }
+        }
+        return sb.toString();
+    }
+}
