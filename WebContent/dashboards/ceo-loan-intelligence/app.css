@@ -9986,7 +9986,7 @@ body, .cd-app-content { background: #eef2f6; }
 .cd-cx-fab:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(13, 148, 136, .55); }
 .cd-cx-fab-ico { display: inline-block; width: 40px; height: 40px; line-height: 40px; text-align: center; border-radius: 50%; background: #ffffff; color: #15803d; font-size: 12px; font-weight: 900; margin-right: 10px; }
 @media (max-width: 640px) { .cd-cx-fab-txt { display: none; } .cd-cx-fab { padding-right: 6px; } .cd-cx-fab-ico { margin-right: 0; } }
-.cd-cx-backdrop { position: fixed; inset: 0; z-index: 940; background: rgba(15, 23, 42, .35); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+.cd-cx-backdrop { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 940; background: rgba(15, 23, 42, .35); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
 .cd-cx-backdrop--on { opacity: 1; pointer-events: auto; }
 .cd-cx-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 950; width: 500px; max-width: 100vw; background: #f8fafc; box-shadow: -12px 0 40px rgba(15, 23, 42, .25); display: flex; flex-direction: column;
   transform: translateX(105%); transition: transform .25s ease; font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif; color: #0f172a; }
@@ -10085,3 +10085,13 @@ body, .cd-app-content { background: #eef2f6; }
 .cd-em-grid { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
 .cd-em-grid > .cd-em-card { -ms-flex: 1 1 380px; flex: 1 1 380px; }
 .cd-em-stats { grid-template-columns: 1fr 1fr; }
+
+/* a colour for every chapter: heading rule, card top edge, so the pages are told apart at a glance */
+.cd-chapter--loan-journey .cd-loan-page-title { border-left: 5px solid #15803d; padding-left: 10px; }
+.cd-chapter--repayment-journey .cd-loan-page-title { border-left: 5px solid #2563eb; padding-left: 10px; }
+.cd-chapter--performance-map .cd-loan-page-title, .cd-chapter--performance-map h1 { border-left: 5px solid #7c3aed; padding-left: 10px; }
+.cd-chapter--loan-journey .cd-cv-card { border-top: 3px solid #86efac; }
+.cd-chapter--repayment-journey .cd-cv-card, .cd-chapter--repayment-journey .cd-rp-card { border-top: 3px solid #93c5fd; }
+.cd-chapter--performance-map .cd-surface, .cd-chapter--performance-map .cd-rp-card { border-top: 3px solid #c4b5fd; }
+.cd-chapter--calendar .cd-surface { border-top: 3px solid #fdba74; }
+.cd-chapter--loan-journey .cd-loan-section-head h2 { border-bottom: 2px solid #bbf7d0; display: inline-block; padding-bottom: 2px; }

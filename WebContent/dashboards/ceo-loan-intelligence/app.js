@@ -5184,6 +5184,10 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     return fmt.missing(r) ? '' : (Math.round(r * 10) / 10) + '× state cash';
   }
   function pct(v) { return fmt.missing(v) ? '—' : fmt.percent(v); }
+  // first two districts, then "+N more" (a zone head can cover many districts)
+  function shortDistricts(list) {
+    return list.length <= 2 ? list.join(', ') : list.slice(0, 2).join(', ') + ' +' + (list.length - 2) + ' more';
+  }
   function initials(name) {
     var w = String(name || '?').replace(/[^A-Za-z ]/g, ' ').split(/\s+/).filter(function (x) { return x && x.length > 1; });
     return ((w[0] || '?').charAt(0) + (w.length > 1 ? w[w.length - 1].charAt(0) : '')).toUpperCase();
@@ -5368,8 +5372,8 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     var c = counts(n);
     function many(k, one, more) { return k + ' ' + (k === 1 ? one : more); }
     var sub = n.kind === 'dgm' ? many(c.agm, 'AGM', 'AGMs') + ' · ' + many(c.officer, 'manager', 'managers') + ' · ' + many(c.mandal, 'mandal', 'mandals')
-            : n.kind === 'agm' ? many(c.officer, 'manager', 'managers') + ' · ' + many(c.mandal, 'mandal', 'mandals') + ' · ' + n.districts.join(', ')
-            : n.kind === 'officer' ? n.role + ' · ' + many(c.mandal, 'mandal', 'mandals') + ' · ' + n.districts.join(', ')
+            : n.kind === 'agm' ? many(c.officer, 'manager', 'managers') + ' · ' + many(c.mandal, 'mandal', 'mandals') + ' · ' + shortDistricts(n.districts)
+            : n.kind === 'officer' ? n.role + ' · ' + many(c.mandal, 'mandal', 'mandals') + ' · ' + shortDistricts(n.districts)
             : n.role;
     var bosses = BOSSES[n.kind + '|' + n.id] || [];
     if (bosses.length > 1) {
@@ -5435,7 +5439,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     });
     function box(title, list) {
       var ents = list.filter(function (x) { return x.n.fig.repaid > 0; }).map(function (x) {
-        return { name: x.n.name + (x.n.districts.length ? ' · ' + x.n.districts.join(', ') : ''), path: x.path,
+        return { name: x.n.name + (x.n.districts.length ? ' · ' + shortDistricts(x.n.districts) : ''), path: x.path,
                  share: x.n.fig.onlineShare, performanceState: bandOf(x.n.fig) };
       });
       return el('div', { className: 'cd-surface cd-rp-card cd-rp-half' }, [
