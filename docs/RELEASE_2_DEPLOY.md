@@ -59,11 +59,28 @@ Then clean + build the EAR exactly as before.
    `Report`, sheet `About` (lists every choice and the data date).
 5. Check Loans Given > "Rank by Overdue amount", and the Employee page "Overdue %".
 
+## If something looks wrong on the live server (quick guide)
+
+| What you see | Most likely cause | What to do |
+|---|---|---|
+| Page opens, everything as before, but no "Loans at Risk", no overdue tiles, Overdue greyed in Custom Excel | The overdue query failed or is switched off. `server.log` has `Overdue figures not available (...)` | Nothing breaks. Send me that log line. To switch overdue off on purpose add `-Dceo.dash.overdue=false` to JBoss and restart. |
+| `Overdue figures look wrong for district ...` | The safety check refused the numbers | Same as above; send the line. |
+| Right after the deploy the page shows the **old** dashboard without overdue for about 20 to 30 minutes | Normal: the previous release's saved data is shown while the new data (with overdue) builds | Wait for `Snapshot PUBLISHED` in the log, then reload. |
+| "Dashboard data is being prepared" for a long time | The build is failing (a query error). Look for `ERROR` after `Loading CEO dashboard snapshot` | Send me the error. The old EAR can be put back (see Rollback). |
+| Green Custom Excel button missing or panel will not open | A script error; the rest of the page still works | Press F12 > Console, send me the red message. |
+| Custom Excel says an error text under the buttons | The choices were refused (for example months outside the data) | The text says what to change. |
+| Download starts but the Excel is empty / wrong | Send me the choices (the `About` sheet lists them) | - |
+| A VO / SHG / woman list shows no overdue | `DAO getOverdueByUnit ...` failed (log line `Overdue for VO list not added`) | The list itself still works. Send me the line. |
+| Browser shows the old look after the deploy | Cached script | Hard refresh (Ctrl+F5). The page asks for `app.js?v=20261008a`, a new name on every release. |
+
+The dashboard never depends on overdue: every overdue part is optional and hides itself when its data is missing.
+
 ## Optional JBoss settings
 
 | `-D` option | Meaning | Default |
 |---|---|---|
 | `ceo.dash.statusTable` | table the overdue figures are read from | `SN.SHG_MEMBER_LOAN_STATUS_NEW` |
+| `ceo.dash.overdue` | `false` = do not read overdue at all (the rest of the dashboard is unchanged) | `true` |
 
 ## How overdue is defined (so the figures can be explained)
 

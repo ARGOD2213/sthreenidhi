@@ -71,7 +71,13 @@ public final class CeoDashboardSnapshotBuilder {
         ArrayList overdueRows = new ArrayList();
         boolean overdueOk = true;
         try {
-            overdueRows = dao.getMandalOverdueRollup();
+            // -Dceo.dash.overdue=false switches overdue off without a redeploy
+            if ("false".equalsIgnoreCase(System.getProperty("ceo.dash.overdue", "true").trim())) {
+                overdueOk = false;
+                CeoLog.info("Overdue figures are switched off (-Dceo.dash.overdue=false)");
+            } else {
+                overdueRows = dao.getMandalOverdueRollup();
+            }
         } catch (Exception e) {
             overdueOk = false;
             CeoLog.warn("Overdue figures not available (" + e.getMessage() + "); the dashboard runs without them");

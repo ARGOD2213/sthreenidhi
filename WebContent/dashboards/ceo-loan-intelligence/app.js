@@ -3496,7 +3496,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
         }
       }
       renderModes();
-      renderRisk(S.scope === 'state' ? null : data.byId[S.districtId]);
+      try { renderRisk(S.scope === 'state' ? null : data.byId[S.districtId]); } catch (riskErr) { if (global.console) { global.console.error(riskErr); } }
       for (var i = 0; i < S.data.length; i++) {
         var dist = S.data[i];
         var pathEl = document.getElementById('dist-' + dist.id);

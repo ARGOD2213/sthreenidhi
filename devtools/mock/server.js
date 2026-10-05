@@ -65,6 +65,11 @@ employees.forEach(function (e) { addOd(e, e, 'e' + e.userId); });
 ['statusLoans','overdueLoans','overdueAmount','outstanding','overdueOutstanding','od1Loans','od1Amount','od2Loans','od2Amount','od3Loans','od3Amount'].forEach(function (k) { totals[k] = districts.reduce(function (s, d) { return s + d[k]; }, 0); });
 totals.overdueReady = 1;
 
+// MOCK_OD=none  -> like a snapshot saved by the previous release (no overdue keys at all)
+// MOCK_OD=zero  -> like a build where the overdue query failed (overdueReady 0, zero fields)
+var ODK = ['statusLoans','overdueLoans','overdueAmount','outstanding','overdueOutstanding','od1Loans','od1Amount','od2Loans','od2Amount','od3Loans','od3Amount'];
+if (process.env.MOCK_OD === 'none') { [districts, mandals, employees, [totals]].forEach(function (l) { l.forEach(function (o) { ODK.forEach(function (k) { delete o[k]; }); delete o.overdueReady; }); }); }
+if (process.env.MOCK_OD === 'zero') { [districts, mandals, employees, [totals]].forEach(function (l) { l.forEach(function (o) { ODK.forEach(function (k) { o[k] = 0; }); }); }); totals.overdueReady = 0; }
 var boot = { ready: true, fyLabel: '2026-27', fyStart: '2026-04-01', fyEnd: '2027-04-01', builtAtMillis: Date.now() - 3600000, fyList: ['2026-27', '2025-26'], targetUnit: 'unconfirmed (likely crore)', totals: totals, districts: districts, months: months, monthly: monthly, daily: daily, projects: projects, purposes: purposes, mandals: mandals, employees: employees };
 
 // ---- drill: fake rows for any level ----

@@ -192,11 +192,12 @@ public final class CeoDashCacheLoader {
                 CeoLog.warn("Saved snapshot failed validation (" + reason + "); ignored");
                 return -1;
             }
-            if (snap.getTotals().get("overdueReady") == null) {
-                CeoLog.info("Saved snapshot is from an older release (no overdue figures); building a new one");
-                return -1;
-            }
             CeoDashCache.publish(snap);
+            if (snap.getTotals().get("overdueReady") == null) {
+                // an older release's data: show it while the new one (with overdue figures) is built
+                CeoLog.info("Saved snapshot is from an older release (no overdue figures); shown now, a new one is being built");
+                return Long.MAX_VALUE / 4;
+            }
             long age = Math.max(0L, System.currentTimeMillis() - snap.getBuiltAtMillis());
             CeoLog.info("Snapshot RESTORED from " + f + " in " + (System.currentTimeMillis() - t0)
                     + " ms, built " + (age / 60000L) + " min ago");
