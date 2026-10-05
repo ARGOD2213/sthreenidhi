@@ -28,7 +28,7 @@ import com.tcs.shg.ceo.util.CeoLog;
 
 public final class CeoDashCacheLoader {
     public static final long DEFAULT_REFRESH_SECONDS = 12L * 60L * 60L;
-    private static final String FILE_NAME = "ceo-dash-snapshot.ser.gz";
+    private static final String FILE_NAME = "sthreenidhi-ceo-snapshot.ser.gz";
 
     private static Timer TIMER = null;
     private static volatile boolean STOPPED = false;
