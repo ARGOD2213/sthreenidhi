@@ -1,87 +1,52 @@
--- READ-ONLY queries for the office query tool (database SNBSAP). They only look; nothing is changed.
--- Run the WHOLE file at once. Every query that reads a table is wrapped in EXEC('...'), so one failing
--- query (missing table, broken view) is reported on its own and the rest still run.
--- Paste all results back in order. Before pasting sample rows, hide any names or phone numbers.
--- NOTE: SN.SHG_MEMBER_DCB_VIEW is broken (it uses a table SHG_LDEMAND that does not exist), so it is not queried.
+-- READ-ONLY, SELECT-ONLY queries for the office query tool (database SNBSAP).
+-- The tool accepts SELECT only (no EXEC, DECLARE, IF), so this file contains plain SELECTs.
+-- Every table named here is confirmed to exist in schema SN, so the whole file can run at once.
+-- Paste all results back in order. Hide any names or phone numbers in the sample rows.
+-- (SN.SHG_MEMBER_DCB_VIEW is a dead view - it needs the missing table SHG_LDEMAND - so it is not used.)
 
-DECLARE @s NVARCHAR(1000);
-
--- 5. Columns of the overdue candidates, with table type (BASE TABLE or VIEW) - any schema
-SELECT C.TABLE_SCHEMA, C.TABLE_NAME, T.TABLE_TYPE, C.ORDINAL_POSITION, C.COLUMN_NAME, C.DATA_TYPE
+-- 1. Columns of the overdue tables in SN (shows table type and every column)
+SELECT C.TABLE_NAME, T.TABLE_TYPE, C.ORDINAL_POSITION, C.COLUMN_NAME, C.DATA_TYPE
 FROM INFORMATION_SCHEMA.COLUMNS C
 JOIN INFORMATION_SCHEMA.TABLES T ON T.TABLE_SCHEMA = C.TABLE_SCHEMA AND T.TABLE_NAME = C.TABLE_NAME
-WHERE C.TABLE_NAME IN ('SHG_MEMBER_LOAN_DEMAND_STATUS','SHG_MEMBER_LOAN_STATUS_NEW','SHG_OVER_DUES','SHG_DEMAND_LEDGER','SHG_WISE_OVERDUE_STATUS','SN_SHG_WISE_OVERDUE_STATUS')
-ORDER BY C.TABLE_SCHEMA, C.TABLE_NAME, C.ORDINAL_POSITION;
+WHERE C.TABLE_SCHEMA = 'SN' AND C.TABLE_NAME IN ('SHG_MEMBER_LOAN_DEMAND_STATUS','SHG_MEMBER_LOAN_STATUS_NEW','SHG_MEMBER_MCP_INFO')
+ORDER BY C.TABLE_NAME, C.ORDINAL_POSITION;
 
--- 6. What the broken DCB view was built from (definition only, nothing is run)
-EXEC('EXEC sp_helptext ''SN.SHG_MEMBER_DCB_VIEW''');
+-- 2. Which schema holds each of the other candidate tables?
+SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_NAME IN ('SHG_WISE_OVERDUE_STATUS','SN_SHG_WISE_OVERDUE_STATUS','SHG_OVER_DUES','SHG_DEMAND_LEDGER',
+                     'LIVELIHOOD_MANDALWISE_TARGET_FY18','SHG_REPORT_OVERDUE','TSP_MEMBER_REPORT_OVERDUE')
+ORDER BY TABLE_NAME, TABLE_SCHEMA;
 
--- 7. Sample rows: demand status table
-EXEC('SELECT TOP 5 * FROM SN.SHG_MEMBER_LOAN_DEMAND_STATUS WITH (NOLOCK)');
-
--- 8. Sample rows: SHG-wise overdue status
-SET @s = NULL;
-SELECT TOP 1 @s = 'SELECT TOP 5 * FROM ' + QUOTENAME(S.name) + '.' + QUOTENAME(O.name) + ' WITH (NOLOCK)' FROM sys.objects O JOIN sys.schemas S ON S.schema_id = O.schema_id
-WHERE O.name = 'SHG_WISE_OVERDUE_STATUS' AND O.type IN ('U','V');
-IF @s IS NULL PRINT 'TABLE NOT FOUND: SHG_WISE_OVERDUE_STATUS' ELSE EXEC(@s);
-
-
--- 9. Sample rows: loan status (due date, EMI, outstanding)
-EXEC('SELECT TOP 5 * FROM SN.SHG_MEMBER_LOAN_STATUS_NEW WITH (NOLOCK)');
-
--- 10. Sample rows: SHG over dues
-SET @s = NULL;
-SELECT TOP 1 @s = 'SELECT TOP 5 * FROM ' + QUOTENAME(S.name) + '.' + QUOTENAME(O.name) + ' WITH (NOLOCK)' FROM sys.objects O JOIN sys.schemas S ON S.schema_id = O.schema_id
-WHERE O.name = 'SHG_OVER_DUES' AND O.type IN ('U','V');
-IF @s IS NULL PRINT 'TABLE NOT FOUND: SHG_OVER_DUES' ELSE EXEC(@s);
-
-
--- 11. Sample rows: demand ledger
-SET @s = NULL;
-SELECT TOP 1 @s = 'SELECT TOP 5 * FROM ' + QUOTENAME(S.name) + '.' + QUOTENAME(O.name) + ' WITH (NOLOCK)' FROM sys.objects O JOIN sys.schemas S ON S.schema_id = O.schema_id
-WHERE O.name = 'SHG_DEMAND_LEDGER' AND O.type IN ('U','V');
-IF @s IS NULL PRINT 'TABLE NOT FOUND: SHG_DEMAND_LEDGER' ELSE EXEC(@s);
-
-
--- 12. Size and freshness: demand status
-EXEC('SELECT COUNT(*) AS ROWS_, MAX(OVERDUE_SINCE) AS LATEST_OVERDUE_SINCE, MIN(OVERDUE_SINCE) AS EARLIEST_OVERDUE_SINCE FROM SN.SHG_MEMBER_LOAN_DEMAND_STATUS WITH (NOLOCK)');
-
--- 13. Size and freshness: loan status
-EXEC('SELECT COUNT(*) AS ROWS_, MAX(DUE_DATE) AS LATEST_DUE_DATE, MIN(DUE_DATE) AS EARLIEST_DUE_DATE FROM SN.SHG_MEMBER_LOAN_STATUS_NEW WITH (NOLOCK)');
-
--- 14. TARGET table the dashboard uses today: columns
+-- 3. Columns of the target table the dashboard uses (any schema)
 SELECT TABLE_SCHEMA, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
 WHERE TABLE_NAME = 'LIVELIHOOD_MANDALWISE_TARGET_FY18' ORDER BY ORDINAL_POSITION;
 
--- 15. TARGET table: sample rows
-SET @s = NULL;
-SELECT TOP 1 @s = 'SELECT TOP 10 * FROM ' + QUOTENAME(S.name) + '.' + QUOTENAME(O.name) + ' WITH (NOLOCK)' FROM sys.objects O JOIN sys.schemas S ON S.schema_id = O.schema_id
-WHERE O.name = 'LIVELIHOOD_MANDALWISE_TARGET_FY18' AND O.type IN ('U','V');
-IF @s IS NULL PRINT 'TABLE NOT FOUND: LIVELIHOOD_MANDALWISE_TARGET_FY18' ELSE EXEC(@s);
-
-
--- 16. TARGET table: size and totals
-SET @s = NULL;
-SELECT TOP 1 @s = 'SELECT COUNT(*) AS ROWS_, SUM(TARGET_AMOUNT) AS SUM_TARGET_AMOUNT, MAX(TARGET_AMOUNT) AS MAX_ONE_ROW FROM ' + QUOTENAME(S.name) + '.' + QUOTENAME(O.name) + ' WITH (NOLOCK)' FROM sys.objects O JOIN sys.schemas S ON S.schema_id = O.schema_id
-WHERE O.name = 'LIVELIHOOD_MANDALWISE_TARGET_FY18' AND O.type IN ('U','V');
-IF @s IS NULL PRINT 'TABLE NOT FOUND: LIVELIHOOD_MANDALWISE_TARGET_FY18' ELSE EXEC(@s);
-
-
--- 17. Other target tables for 2025-26 / 2026-27
+-- 4. Other target tables that may hold 2025-26 / 2026-27
 SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_NAME LIKE '%TARGET%' OR TABLE_NAME LIKE '%FY25%' OR TABLE_NAME LIKE '%FY26%' OR TABLE_NAME LIKE '%FY27%'
    OR TABLE_NAME LIKE '%2025_26%' OR TABLE_NAME LIKE '%2026_27%'
 ORDER BY TABLE_NAME;
 
--- 18. Open loans in the table the dashboard already uses
-EXEC('SELECT TOP 5 SHG_MEMBER_LOAN_ACCNO, LOAN_STATUS, LOAN_AMOUNT_ISSUED, OUTSTANDING, EMI, INSTALLMENTS FROM SN.SHG_MEMBER_MCP_INFO WITH (NOLOCK) WHERE LOAN_STATUS = ''OPEN''');
+-- 5. Sample rows: demand status (overdue_since, outstanding)
+SELECT TOP 5 * FROM SN.SHG_MEMBER_LOAN_DEMAND_STATUS WITH (NOLOCK);
 
--- 19. Where the overdue / demand objects live
-SELECT S.name AS SCHEMA_NAME, O.name AS OBJECT_NAME, O.type_desc, O.create_date, O.modify_date
-FROM sys.objects O JOIN sys.schemas S ON S.schema_id = O.schema_id
-WHERE O.name LIKE '%DCB%' OR O.name LIKE '%DEMAND%' OR O.name LIKE '%OVER_DUES%' OR O.name LIKE '%OVERDUE%'
-ORDER BY O.name;
+-- 6. Sample rows: loan status (due date, EMI, outstanding)
+SELECT TOP 5 * FROM SN.SHG_MEMBER_LOAN_STATUS_NEW WITH (NOLOCK);
 
--- 20. Can this login see definitions?
-SELECT DB_NAME() AS DB, SUSER_NAME() AS LOGIN_NAME, USER_NAME() AS DB_USER,
-       HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'VIEW DEFINITION') AS CAN_VIEW_DEFINITION;
+-- 7. Size and freshness: demand status
+SELECT COUNT(*) AS ROWS_, MAX(OVERDUE_SINCE) AS LATEST_OVERDUE_SINCE, MIN(OVERDUE_SINCE) AS EARLIEST_OVERDUE_SINCE
+FROM SN.SHG_MEMBER_LOAN_DEMAND_STATUS WITH (NOLOCK);
+
+-- 8. Size and freshness: loan status
+SELECT COUNT(*) AS ROWS_, MAX(DUE_DATE) AS LATEST_DUE_DATE, MIN(DUE_DATE) AS EARLIEST_DUE_DATE
+FROM SN.SHG_MEMBER_LOAN_STATUS_NEW WITH (NOLOCK);
+
+-- 9. Open loans in the table the dashboard already uses
+SELECT TOP 5 SHG_MEMBER_LOAN_ACCNO, LOAN_STATUS, LOAN_AMOUNT_ISSUED, OUTSTANDING, EMI, INSTALLMENTS
+FROM SN.SHG_MEMBER_MCP_INFO WITH (NOLOCK) WHERE LOAN_STATUS = 'OPEN';
+
+-- 10. How much of the open-loan book has an OUTSTANDING value, and how big is it?
+SELECT COUNT(*) AS OPEN_LOANS,
+       SUM(CASE WHEN OUTSTANDING IS NOT NULL THEN 1 ELSE 0 END) AS WITH_OUTSTANDING,
+       SUM(OUTSTANDING) AS TOTAL_OUTSTANDING, SUM(LOAN_AMOUNT_ISSUED) AS TOTAL_ISSUED
+FROM SN.SHG_MEMBER_MCP_INFO WITH (NOLOCK) WHERE LOAN_STATUS = 'OPEN';
