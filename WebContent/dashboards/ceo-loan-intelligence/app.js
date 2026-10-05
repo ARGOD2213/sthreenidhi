@@ -2237,6 +2237,12 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     return r === 'MANAGER' ? 'Manager' : r === 'AM' ? 'Assistant Manager' : r === 'AGM' ? 'AGM (as officer)' : 'Officer';
   }
 
+  // first two names, then "+N more" - a district can have many AGMs and the full list ran over several lines
+  function shortList(names) {
+    if (!names.length) { return '\u2014'; }
+    return names.length <= 2 ? names.join(' / ') : names.slice(0, 2).join(' / ') + ' +' + (names.length - 2) + ' more';
+  }
+
   function responsible(data, scope) {
     if (scope.office && scope.office.officer) {
       var o = scope.office.officer;
@@ -2250,7 +2256,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
         if (of.agmName && agms.indexOf(of.agmName) === -1) { agms.push(of.agmName); }
         if (of.dgmName && dgms.indexOf(of.dgmName) === -1) { dgms.push(of.dgmName); }
       });
-      return { officer: null, agm: agms.join(' / ') || '—', dgm: dgms.join(' / ') || '—' };
+      return { officer: null, agm: shortList(agms), dgm: shortList(dgms) };
     }
     return null;
   }

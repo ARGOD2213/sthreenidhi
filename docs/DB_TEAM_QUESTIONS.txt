@@ -1,0 +1,59 @@
+QUESTIONS FOR THE SNBSAP DATABASE TEAM
+======================================
+Send these as they are. Ask for the answer in writing (a short mail or a note
+with table and column names). One person who knows the loan tables is enough.
+
+A. OVERDUE LOANS  (the dashboard cannot show them today)
+---------------------------------------------------------
+Today the dashboard only knows: amount given, amount repaid, loans open/closed.
+It has no "overdue" figure. Please tell us:
+
+ 1. Does SNBSAP store a REPAYMENT SCHEDULE (EMI / instalment list) for each
+    member loan?  If yes: table name, and the columns for
+      - loan account number (SHG_MEMBER_LOAN_ACCNO)
+      - instalment due date
+      - instalment amount due
+      - amount paid against that instalment
+ 2. If there is no schedule table: is there a column on the loan itself for
+      - number of instalments / tenure in months
+      - EMI amount
+      - first instalment date
+    (we can compute "due so far" from these).
+ 3. Is there already a column or view that holds OVERDUE / ARREARS / DEMAND /
+    OUTSTANDING PRINCIPAL per loan?  (Some systems call it DEMAND, COLLECTION
+    or DCB = Demand, Collection, Balance.)  Table name, column names, and how
+    often it is refreshed.
+ 4. What is the official rule for "overdue" - overdue from the 1st day after the
+    due date, or after 30 days?  Is there a rule for NPA (for example 90 days)?
+ 5. Interest: is interest charged on these loans (the page says "incl.
+    interest")?  Where is the outstanding INTEREST kept?
+ 6. Are there loan statuses other than OPEN and CLOSED (for example WRITTEN-OFF,
+    RESCHEDULED, FORECLOSED)?  List all values of LOAN_STATUS.
+ 7. Please give us a sample: ONE loan with its schedule rows and its repayments,
+    so we can check that "due minus paid" gives the right overdue.
+
+B. TARGET FIGURE  (unit is not confirmed)
+-----------------------------------------
+The page shows a target such as 5,713 for the State for FY 2025-26, while about
+95 crore was given in one month. We guess the target is in CRORE rupees but it
+is not confirmed.
+
+ 1. Which table and column hold the target?  (we use TARGET_AMOUNT)
+ 2. In what unit is it stored - rupees, lakh or crore?
+ 3. Is it a target for ANNUAL disbursement (amount given), or for something
+    else (members, loans, collections)?
+ 4. At what level is it entered - mandal, district or both?  If both, does the
+    district value equal the sum of its mandals?
+ 5. Is there one target per financial year, or can it change during the year
+    (revised targets)?  Which one is the valid one?
+ 6. Is there also a COLLECTION / REPAYMENT target?  (The page now shows only a
+    disbursement target.)
+
+C. ALSO USEFUL (ask in the same mail)
+-------------------------------------
+ 1. Is there a column for the PURPOSE / ACTIVITY that is clean (a code table)
+    so that "Petty business", "Dairy" etc. always come out the same?
+ 2. Can the dashboard login SNBSAP_QT read the tables above?  (read-only is
+    enough)
+ 3. What is the best time of day for heavy read queries (the dashboard reads
+    all data once every 12 hours, about 20 minutes)?

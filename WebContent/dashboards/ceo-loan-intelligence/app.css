@@ -5823,7 +5823,7 @@ svg.cd-flow-threads {
 .cd-chapter--loan-journey {
   background: #eef2f6 !important;
   min-height: calc(100vh - 105px);
-  padding: 20px 32px 48px !important;
+  padding: 20px 28px 48px !important;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -9905,3 +9905,53 @@ svg.cd-flow-threads {
 }
 .cd-chapter--performance-map.cd-chapter--lg { padding-left: 20px; padding-right: 20px; box-sizing: border-box; }
 @media (max-width: 760px) { .cd-chapter--performance-map.cd-chapter--lg { padding-left: 12px; padding-right: 12px; } }
+
+/* ===================================================================================
+   v2 polish (appended last so it wins): one page frame for every chapter, a map that
+   fills the screen height, rounded cards instead of arrow shapes, aligned tables.
+   =================================================================================== */
+body, .cd-app-content { background: #eef2f6; }
+.cd-app-content { min-height: calc(100vh - 110px); }
+
+/* same side margins and top space on every chapter */
+.cd-chapter,
+.cd-chapter.cd-chapter--lg,
+.cd-chapter--loan-journey,
+.cd-chapter--repayment-journey,
+.cd-chapter--performance-map.cd-chapter--lg {
+  padding: 20px 28px 48px;
+  background: transparent;
+  box-sizing: border-box;
+}
+.cd-chapter--calendar { padding: 20px 8px 48px; }
+@media (max-width: 760px) {
+  .cd-chapter, .cd-chapter.cd-chapter--lg, .cd-chapter--performance-map.cd-chapter--lg { padding: 14px 12px 40px; }
+}
+
+/* Overview: map card stays in view and fills the screen height - no empty space below it */
+.main-wrapper { padding: 20px 28px 48px; background: transparent; gap: 24px; }
+.main-wrapper .left-panel { top: 14px; }
+.map-card { display: flex; flex-direction: column; }
+.map-image-container { height: calc(100vh - 330px); min-height: 440px; max-height: 760px; }
+.map-image-container > svg { width: 100%; height: 100%; max-height: 100%; }
+.map-footer { flex-wrap: wrap; gap: 10px 16px; }
+.showing-badge { white-space: nowrap; }
+.legend-container { flex-wrap: wrap; gap: 8px 16px; }
+.legend-container > div { white-space: nowrap; }
+
+/* social-status cards: rounded card with the badge inside, no arrow shape */
+.cd-social-chevron-wrapper { clip-path: none; border-radius: 16px; padding: 2px; filter: none; box-shadow: 0 2px 8px rgba(15, 23, 42, .07); }
+.cd-social-chevron-wrapper:hover { transform: translateY(-2px); filter: none; box-shadow: 0 6px 16px rgba(15, 23, 42, .12); }
+.cd-social-chevron-inner { clip-path: none; border-radius: 14px; padding: 14px 16px 12px 62px; }
+.cd-social-badge-circle { left: 14px; width: 38px; height: 38px; font-size: 12px; letter-spacing: -.02em; }
+.cd-project-arrow { display: none; }
+
+/* tables: headings sit over their numbers */
+.cd-ex-table th:not(:first-child) { text-align: right; }
+.cd-ex-table th, .cd-ex-table td { padding: 10px 14px; }
+
+/* employee cards: the line under the name may wrap instead of being cut */
+.cd-em-card .cd-em-sub { white-space: normal; }
+.cd-ex-table-wrap { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; }
+.cd-ex-table td { background: #ffffff; border-bottom: 1px solid #f1f5f9; }
+.cd-ex-table tr:last-child td { border-bottom: 0; }
