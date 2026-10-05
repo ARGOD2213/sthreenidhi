@@ -48,8 +48,11 @@ public final class CeoDashExport {
                           "Manual / cash (Rs)", "Online %", "Target (Rs)" };
         // overdue is known per district and per mandal only (today's figure, not tied to the period)
         Map overdue = overdueIndex(snap, group);
+        boolean fromRows = false;      // VO / SHG / woman lists carry their own overdue figures in each row
+        for (int i = 0; i < rows.size(); i++) { if (((Map) rows.get(i)).get("od") instanceof Map) fromRows = true; }
+        boolean odCols = overdue != null || fromRows;
         String[] head = base;
-        if (overdue != null) {
+        if (odCols) {
             head = new String[base.length + 5];
             System.arraycopy(base, 0, head, 0, base.length);
             head[17] = "Overdue (Rs)"; head[18] = "Loans in arrears"; head[19] = "Overdue % of open loans";
@@ -71,13 +74,22 @@ public final class CeoDashExport {
                 r.get("targetCr") == null ? null : Double.valueOf(d(r.get("targetCr")) * 10000000d)
             };
             System.arraycopy(first, 0, v, 0, first.length);
-            if (overdue != null) {
-                Map od = (Map) overdue.get("DISTRICT".equals(group) ? s(r.get("id")) : s(r.get("districtId")) + "|" + s(r.get("id")));
-                if (od != null) {
-                    double open = d(od.get("statusLoans")), behind = d(od.get("overdueLoans"));
-                    v[17] = od.get("overdueAmount"); v[18] = od.get("overdueLoans");
+            if (odCols) {
+                double open = -1, behind = 0;
+                if (overdue != null) {
+                    Map od = (Map) overdue.get("DISTRICT".equals(group) ? s(r.get("id")) : s(r.get("districtId")) + "|" + s(r.get("id")));
+                    if (od != null) {
+                        open = d(od.get("statusLoans")); behind = d(od.get("overdueLoans"));
+                        v[17] = od.get("overdueAmount"); v[18] = od.get("overdueLoans");
+                        v[20] = od.get("overdueOutstanding"); v[21] = od.get("outstanding");
+                    }
+                } else if (r.get("od") instanceof Map) {
+                    Map od = (Map) r.get("od");
+                    open = d(od.get("open")); behind = d(od.get("loans"));
+                    v[17] = od.get("amount"); v[18] = od.get("loans"); v[20] = od.get("atRisk"); v[21] = od.get("outstanding");
+                }
+                if (open >= 0) {
                     v[19] = open > 0 ? Double.valueOf(Math.round(behind / open * 1000) / 10.0) : null;
-                    v[20] = od.get("overdueOutstanding"); v[21] = od.get("outstanding");
                     odOpen += open;
                 }
             }
@@ -88,7 +100,7 @@ public final class CeoDashExport {
         total[1] = "Total";
         for (int c = 3; c < head.length; c++) { if (c != 15 && c != 19 && seen[c]) total[c] = Double.valueOf(tot[c]); }
         if (tot[10] > 0) total[15] = Double.valueOf(Math.round((tot[11] + tot[12] + tot[13]) / tot[10] * 1000) / 10.0);
-        if (overdue != null && odOpen > 0) total[19] = Double.valueOf(Math.round(tot[18] / odOpen * 1000) / 10.0);
+        if (odCols && odOpen > 0) total[19] = Double.valueOf(Math.round(tot[18] / odOpen * 1000) / 10.0);
         b.totalRow(sh, rows.size() + 1, total);
 
         b.info(new String[][] {
@@ -97,7 +109,7 @@ public final class CeoDashExport {
             { "Rows", String.valueOf(rows.size()) },
             { "Payment modes", Boolean.FALSE.equals(body.get("payModes")) ? "not available" : "UPI = Phi PAYMENT SERVICE, POS = PAYTM PAYMENT SERVICE, Auto-debit = SHG AUTO DEBIT PROCESS, rest = manual" },
             { "Scope", "Stree Nidhi projects only (LOAN_TYPE = SN)" },
-            { "Overdue", overdue == null ? "not in this list" : "Overdue = arrears of today's open loans (as on the snapshot date), not tied to the period chosen" },
+            { "Overdue", !odCols ? "not in this list" : "Overdue = arrears of today's open loans (as on the snapshot date), not tied to the period chosen" },
             { "Downloaded", new SimpleDateFormat("dd-MM-yyyy HH:mm").format(new Date()) }
         });
         return b.bytes();

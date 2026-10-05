@@ -12,7 +12,9 @@ database yet** - the first live start is the real test (steps below).
    - Loans Given: **Overdue** tile; rank districts / mandals by **Overdue amount** and **Overdue %**.
    - Repayment & Payments: rank by **Overdue** and **Overdue %**.
    - Employee Performance: **Overdue** tile, overdue on every DGM / AGM / manager card, rank by **Overdue %**.
-   - Excel downloads (district, mandal lists and employee sheets) carry overdue columns.
+   - **VO, SHG and women lists**: the same Overdue ranking, read live for the list you open (one small query on the
+     indexed status table); a woman's profile shows each open loan's **overdue, balance and instalment** (or "Up to date").
+   - Excel downloads (district, mandal, VO, SHG and women lists and the employee sheets) carry overdue columns.
    - If the status table cannot be read, the dashboard still works and simply hides overdue (see the log line below).
 2. **Custom Excel**: a floating button (bottom right). Choose what each row is (district, mandal, project, month, manager,
    AGM, DGM), districts / mandals, months, project, columns (loans, collections, target, overdue), sort, row limit; preview the
@@ -30,6 +32,7 @@ database yet** - the first live start is the real test (steps below).
 | `src/.../dashboard/ceoloan/cache/CeoDashboardSnapshotBuilder.java` | overdue fields per mandal, district, state, employee |
 | `src/.../dashboard/ceoloan/cache/CeoDashCacheLoader.java` | an older saved snapshot (no overdue) is ignored once |
 | `src/.../dashboard/ceoloan/service/CeoDashExport.java` | overdue columns in Excel files |
+| `src/.../dashboard/ceoloan/service/CeoDashboardService.java` | overdue added to VO / SHG / women lists and to a woman's loans |
 | `src/.../dashboard/ceoloan/service/CeoDashCustomExport.java` | **NEW file** (create it in the `service` package) |
 | `src/.../dashboard/ceoloan/web/CeoLoanIntelligenceServlet.java` | `custom` and `customPreview` actions |
 | `WebContent/dashboards/ceo-loan-intelligence/CeoLoanIntelligence.jsp` | overdue fields in the page data, new asset version |
@@ -44,6 +47,7 @@ Then clean + build the EAR exactly as before.
 1. `server.log` (search `[CEO-DASH]`):
    - `Saved snapshot is from an older release (no overdue figures); building a new one` - normal on the first start.
    - `DAO getMandalOverdueRollup rows=... ms=...` - the overdue query worked (about 600 to 700 rows).
+   - `DAO getOverdueByUnit VO ...` / `getOverdueByLoan` appear when someone opens a VO, SHG or woman (should take well under a second).
    - Instead: `Overdue figures not available (...)` - the query failed; send me the reason (usually a permission on
      `SN.SHG_MEMBER_LOAN_STATUS_NEW`). The dashboard keeps working without overdue.
    - `Overdue figures look wrong for district ...; not shown` - a safety check refused the numbers.
@@ -77,7 +81,6 @@ Keep the previous EAR. To go back, replace the EAR with it. If the new snapshot 
 
 ## Not done yet (ideas for next time)
 
-- Overdue for VOs, SHGs and members (needs an index check on the status table first - see `docs/RECHECK_QUERIES_NEXT.sql`).
 - Overdue age in days (the table has the due date of the latest instalment only).
 - Signed-link security (`-Dsthreenidhi.token.secret`), then share the signing method with the external site.
 - A per-loan overdue line in the member profile.

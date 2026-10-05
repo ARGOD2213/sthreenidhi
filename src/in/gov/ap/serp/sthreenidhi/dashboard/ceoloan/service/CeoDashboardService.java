@@ -208,6 +208,7 @@ public final class CeoDashboardService {
         String json = (String) CACHE.get(key);
         if (json == null) {
             ArrayList rows = limited("drill", g, d, m, v, s, from, to, p);
+            attachOverdue(snap, rows, g, d, m, v, s);
             json = sqlJson(rows, d);
             CACHE.put(key, json);
         }
@@ -274,6 +275,36 @@ public final class CeoDashboardService {
         return t;
     }
 
+    // overdue of today's open loans for VOs, SHGs and women (one small indexed read); a failure only leaves it out
+    private void attachOverdue(CeoDashboardSnapshot snap, ArrayList rows, String g, String d, String m, String v, String s) {
+        if (!("VO".equals(g) || "SHG".equals(g) || "MEMBER".equals(g)) || !CeoDashExport.isOverdueReady(snap) || rows.isEmpty()) return;
+        try {
+            ArrayList od;
+            if (!SQL_SLOTS.tryAcquire(SLOT_WAIT_SECONDS, TimeUnit.SECONDS)) return;
+            try { od = dao.getOverdueByUnit(g, d, m, v, s); } finally { SQL_SLOTS.release(); }
+            Map by = new HashMap();
+            for (int i = 0; i < od.size(); i++) { Map r = (Map) od.get(i); by.put(str(r.get("UNIT_ID")), r); }
+            for (int i = 0; i < rows.size(); i++) {
+                Map row = (Map) rows.get(i);
+                Object o = by.get(str(row.get("UNIT_ID")));
+                if (o != null) row.put("OD", o);
+            }
+        } catch (Exception e) {
+            in.gov.ap.serp.sthreenidhi.dashboard.ceoloan.util.CeoLog.warn("Overdue for " + g + " list not added: " + e.getMessage());
+        }
+    }
+
+    private static void appendOverdue(StringBuffer sb, Map r) {
+        Map od = (Map) r.get("OD");
+        if (od == null) return;
+        sb.setLength(sb.length() - 1);
+        sb.append(",\"od\":{\"open\":").append(lng(od.get("STATUS_LOANS")))
+          .append(",\"loans\":").append(lng(od.get("OVERDUE_LOANS")))
+          .append(",\"amount\":").append(money(num(od.get("OVERDUE_AMOUNT"))))
+          .append(",\"outstanding\":").append(money(num(od.get("OUTSTANDING_AMOUNT"))))
+          .append(",\"atRisk\":").append(money(num(od.get("OVERDUE_OUTSTANDING")))).append("}}");
+    }
+
     private static String sqlJson(ArrayList rows, String districtId) {
         StringBuffer sb = new StringBuffer("{\"source\":\"sql\",\"payModes\":" + CeoLoanIntelligenceDAOImpl.PAY_MODES + ",\"rows\":[");
         for (int i = 0; i < rows.size(); i++) {
@@ -292,6 +323,7 @@ public final class CeoDashboardService {
                 sb.setLength(sb.length() - 1);
                 sb.append(",\"parentId\":").append(q(parent)).append('}');
             }
+            appendOverdue(sb, r);
         }
         return sb.append("]}").toString();
     }
@@ -347,6 +379,18 @@ public final class CeoDashboardService {
                 l.add(r);
             }
         }
+        Map arrears = new HashMap();      // loan number -> overdue figures of that loan (open loans only)
+        if (member != null && CeoDashExport.isOverdueReady(snap) && !loans.isEmpty()) {
+            try {
+                ArrayList od;
+                if (SQL_SLOTS.tryAcquire(SLOT_WAIT_SECONDS, TimeUnit.SECONDS)) {
+                    try { od = dao.getOverdueByLoan(str(member.get("SHG_ID"))); } finally { SQL_SLOTS.release(); }
+                    for (int i = 0; i < od.size(); i++) { Map r = (Map) od.get(i); arrears.put(str(r.get("LOAN_ACCNO")), r); }
+                }
+            } catch (Exception e) {
+                in.gov.ap.serp.sthreenidhi.dashboard.ceoloan.util.CeoLog.warn("Overdue of the loans not added: " + e.getMessage());
+            }
+        }
         StringBuffer sb = new StringBuffer("{\"member\":");
         if (member == null) sb.append("null");
         else sb.append("{\"id\":").append(q(str(member.get("MEMBER_ID"))))
@@ -388,8 +432,15 @@ public final class CeoDashboardService {
               .append(",\"issuedDate\":").append(q(str(l.get("ISSUED_DATE"))))
               .append(",\"repaid\":").append(money(repaid))
               .append(",\"repayTxns\":").append(txns.size())
-              .append(",\"lastRepaymentDate\":").append(q(last))
-              .append(",\"repayments\":[");
+              .append(",\"lastRepaymentDate\":").append(q(last));
+            Map ar = (Map) arrears.get(acc);
+            if (ar != null) {
+                sb.append(",\"arrears\":").append(money(num(ar.get("ARREARS"))))
+                  .append(",\"emi\":").append(money(num(ar.get("EMI"))))
+                  .append(",\"balance\":").append(money(num(ar.get("OUTSTANDING"))))
+                  .append(",\"dueDate\":").append(q(str(ar.get("DUE_DATE"))));
+            }
+            sb.append(",\"repayments\":[");
             for (int t = 0; t < txns.size(); t++) {
                 Map x = (Map) txns.get(t);
                 if (t > 0) sb.append(",");

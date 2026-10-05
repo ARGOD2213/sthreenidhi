@@ -363,6 +363,61 @@ public class CeoLoanIntelligenceDAOImpl implements CeoLoanIntelligenceDAO {
         return query("getMandalOverdueRollup", overdueSql(), new Object[0], refreshTimeout());
     }
 
+    // the same arrears figures as the mandal roll-up, for the columns shared by every overdue query
+    private static String overdueColumns() {
+        String due = "ISNULL(S.LOAN_DUE, 0)", bal = "ISNULL(S.OUTSTANDING, 0)";
+        return " COUNT(*) AS STATUS_LOANS," +
+               " SUM(CASE WHEN " + due + " > 0 THEN 1 ELSE 0 END) AS OVERDUE_LOANS," +
+               " SUM(CASE WHEN " + due + " > 0 THEN " + due + " ELSE 0 END) AS OVERDUE_AMOUNT," +
+               " SUM(CASE WHEN " + bal + " > 0 THEN " + bal + " ELSE 0 END) AS OUTSTANDING_AMOUNT," +
+               " SUM(CASE WHEN " + due + " > 0 AND " + bal + " > 0 THEN " + bal + " ELSE 0 END) AS OVERDUE_OUTSTANDING";
+    }
+
+    private static final String VOS_OF_MANDAL =
+        " S.VO_ID IN (SELECT VX.TRANS_VO_ID FROM VO_INFO VX WITH (NOLOCK)" +
+        "              WHERE VX.DISTRICT_ID = ? AND VX.MANDAL_ID = ? AND VX.IS_ACTIVE = 'Y')";
+
+    // the status table is indexed by VO_ID and SHG_ID, so each of these reads one small slice
+    static String overdueByUnitSql(String g, boolean voGiven) {
+        String unit, where;
+        if ("VO".equals(g)) { unit = "S.VO_ID"; where = VOS_OF_MANDAL; }
+        else if ("SHG".equals(g)) { unit = "S.SHG_ID"; where = voGiven ? " S.VO_ID = ?" : VOS_OF_MANDAL; }
+        else if ("MEMBER".equals(g)) { unit = "MCP.MEMBER_LONG_CODE"; where = " S.SHG_ID = ?"; }
+        else throw new IllegalArgumentException("overdue is not available for group " + g);
+        return "SELECT " + unit + " AS UNIT_ID," + overdueColumns() +
+               " FROM " + STATUS_TABLE + " S WITH (NOLOCK)" +
+               " INNER JOIN SHG_MEMBER_MCP_INFO MCP WITH (NOLOCK) ON MCP.SHG_MEMBER_LOAN_ACCNO = S.SHG_MEMBER_LOAN_ACCNO" +
+               " WHERE" + where + " AND S.IS_CLOSED = 0 AND MCP.LOAN_STATUS = 'OPEN' AND" + loanQuality("MCP") +
+               " GROUP BY " + unit;
+    }
+
+    public ArrayList getOverdueByUnit(String group, String districtId, String mandalId, String voId, String shgId) throws Exception {
+        String g = group == null ? "" : group.trim().toUpperCase();
+        boolean voGiven = !blank(voId);
+        String sql = overdueByUnitSql(g, voGiven);
+        Object[] params;
+        if ("MEMBER".equals(g)) {
+            if (blank(shgId)) throw new IllegalArgumentException("shgId is needed");
+            params = new Object[] { checkKey("shgId", shgId) };
+        } else if ("SHG".equals(g) && voGiven) {
+            params = new Object[] { checkKey("voId", voId) };
+        } else {
+            if (blank(districtId) || blank(mandalId)) throw new IllegalArgumentException("districtId and mandalId are needed");
+            params = new Object[] { checkKey("districtId", districtId), checkKey("mandalId", mandalId) };
+        }
+        return query("getOverdueByUnit " + g, sql, params, DRILLDOWN_TIMEOUT_SECONDS);
+    }
+
+    public ArrayList getOverdueByLoan(String shgId) throws Exception {
+        if (blank(shgId)) throw new IllegalArgumentException("shgId is needed");
+        String sql =
+            "SELECT S.SHG_MEMBER_LOAN_ACCNO AS LOAN_ACCNO, ISNULL(S.LOAN_DUE, 0) AS ARREARS, ISNULL(S.LOAN_EMI, 0) AS EMI," +
+            " ISNULL(S.OUTSTANDING, 0) AS OUTSTANDING, CONVERT(CHAR(10), S.DUE_DATE, 120) AS DUE_DATE" +
+            " FROM " + STATUS_TABLE + " S WITH (NOLOCK)" +
+            " WHERE S.SHG_ID = ? AND S.IS_CLOSED = 0";
+        return query("getOverdueByLoan", sql, new Object[] { checkKey("shgId", shgId) }, DRILLDOWN_TIMEOUT_SECONDS);
+    }
+
     // package-visible so a test can look at the exact text
     static String overdueSql() {
         String due = "ISNULL(S.LOAN_DUE, 0)", emi = "ISNULL(S.LOAN_EMI, 0)", bal = "ISNULL(S.OUTSTANDING, 0)";

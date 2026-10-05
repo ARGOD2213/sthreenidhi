@@ -10098,3 +10098,7 @@ body, .cd-app-content { background: #eef2f6; }
 
 .cd-ov-mcard[data-oid] { cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; }
 .cd-ov-mcard[data-oid]:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(15, 23, 42, .12); }
+
+.cd-lg-arrears { margin: 8px 0 6px; padding: 6px 10px; border-radius: 9px; font-size: 12px; font-weight: 700; display: table; }
+.cd-lg-arrears--bad { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.cd-lg-arrears--ok { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }

@@ -41,6 +41,12 @@ public interface CeoLoanIntelligenceDAO {
     // overdue (arrears) of today's open loans per mandal: from the daily-refreshed loan status table
     ArrayList getMandalOverdueRollup() throws Exception;
 
+    // overdue per VO (mandal scope), per SHG (VO or mandal scope) or per woman (SHG scope): UNIT_ID plus the overdue columns
+    ArrayList getOverdueByUnit(String group, String districtId, String mandalId, String voId, String shgId) throws Exception;
+
+    // overdue of every open loan of one SHG, by loan number (for a woman's loans)
+    ArrayList getOverdueByLoan(String shgId) throws Exception;
+
     ArrayList drill(String group, String districtId, String mandalId, String voId, String shgId,
                     String periodStart, String periodEnd, String projectType) throws Exception;
 

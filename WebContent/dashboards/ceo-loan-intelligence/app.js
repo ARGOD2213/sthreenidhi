@@ -188,6 +188,19 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     targetBlock: targetBlock
   };
 })(window);
+/* ---------- A loan's arrears line (shown on a woman's loans) ---------- */
+(function (global) {
+  'use strict';
+  var CeoDash = global.CeoDash = global.CeoDash || {};
+  // l.arrears / l.balance / l.emi come from the daily loan status table; absent for closed loans or when overdue is not available
+  CeoDash.core.arrearsLine = function (l) {
+    if (!l || l.arrears === undefined || l.arrears === null) { return null; }
+    var fmt = CeoDash.core.format, behind = l.arrears > 0;
+    return CeoDash.core.dom.el('div', { className: 'cd-lg-arrears ' + (behind ? 'cd-lg-arrears--bad' : 'cd-lg-arrears--ok') },
+      behind ? 'Overdue ' + fmt.rupees(l.arrears) + ' \u00b7 balance ' + fmt.rupees(l.balance) + (l.emi > 0 ? ' \u00b7 instalment ' + fmt.rupees(l.emi) : '')
+             : 'Up to date \u00b7 balance ' + fmt.rupees(l.balance));
+  };
+})(window);
 /* ---------- Small SVG chart helpers ---------- */
 (function (global) {
   'use strict';
@@ -2310,7 +2323,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
       }
       r.navId = navId; r.sub = sub;
       var odEnt = navId && data.byId[navId];
-      r.od = odEnt && odEnt.metrics && odEnt.metrics.od ? odEnt.metrics.od : null;
+      if (odEnt && odEnt.metrics && odEnt.metrics.od) { r.od = odEnt.metrics.od; } else if (!r.od) { r.od = null; }
       return r;
     });
     return { rows: rows, source: res.body.source };
@@ -2697,6 +2710,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
           el('span', {}, 'Member loan a/c ' + l.id),
           el('span', {}, 'SHG loan a/c ' + (l.shgLoanAccNo || '—'))
         ]),
+        CeoDash.core.arrearsLine(l),
         txRows.length ? el('div', { className: 'cd-ex-table-wrap cd-ex-table-wrap--short' }, [el('table', { className: 'cd-ex-table cd-ex-table--tx' }, [
           el('thead', {}, [el('tr', {}, ['Repayment date', 'Amount', 'Status', 'Processing', 'Adjustment', 'Credited', 'Paid by'].map(function (h) { return el('th', {}, h); }))]),
           el('tbody', {}, txRows)
@@ -4539,6 +4553,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
           el('span', {}, 'Repaid ' + fmt.rupees(l.repaid) + ' (incl. interest)'),
           el('span', {}, fmt.number(l.repayTxns) + (l.repayTxns === 1 ? ' repayment' : ' repayments'))
         ]),
+        CeoDash.core.arrearsLine(l),
         toggle, table
       ]);
     });
@@ -4597,7 +4612,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
       remember(ch.group, rows);
       var list = rows.map(function (r) {
         var navId = navIdOf(data, scope, ch.group, r), ent = navId && data.byId[navId];
-        r.od = ent && ent.metrics && ent.metrics.od ? ent.metrics.od : null;
+        if (ent && ent.metrics && ent.metrics.od) { r.od = ent.metrics.od; } else if (!r.od) { r.od = null; }
         return { r: r, navId: navId, name: ent ? ent.name : titleCase(r.name || r.id), sub: subOf(data, scope, ch.group, r, navId),
                  disbursed: r.disbursed || 0, loans: r.loanCount || 0, women: has(r.borrowers) ? r.borrowers : 0, active: r.openLoans || 0,
                  odAmt: r.od ? r.od.amount : 0, odLoans: r.od ? r.od.loans : 0, odOpen: r.od ? r.od.open : 0,
@@ -4809,7 +4824,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     return rows.map(function (r) {
       var navId = K.navIdOf(data, scope, ch.group, r);
       var ent = navId && data.byId[navId];
-      r.od = ent && ent.metrics && ent.metrics.od ? ent.metrics.od : null;
+      if (ent && ent.metrics && ent.metrics.od) { r.od = ent.metrics.od; } else if (!r.od) { r.od = null; }
       return { id: r.id, navId: navId, row: r,
                name: ent ? ent.name : (ch.group === 'DISTRICT' || ch.group === 'MANDAL' ? K.titleCase(r.name) : K.titleCase(r.name || r.id)),
                sub: K.subOf(data, scope, ch.group, r, navId),
