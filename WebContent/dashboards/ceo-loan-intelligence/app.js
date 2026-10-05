@@ -2878,7 +2878,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
           mandals: (region.officeIds || []).map(function (oid) {
             var o = realData.byId[oid], om = o.metrics;
             var ach = om.disbursedTarget > 0 ? (om.disbursed / om.disbursedTarget) * 100 : NaN;
-            return { name: o.name, y: om.disbursed / 1e7, q: om.disbursed / 1e7, m: om.disbursed / 1e7,
+            return { oid: oid, name: o.name, y: om.disbursed / 1e7, q: om.disbursed / 1e7, m: om.disbursed / 1e7,
                      rep: ach, ovd: NaN, status: achievementStatus(ach),
                      officer: o.officer && o.officer.userId ? CeoDash.explorer.roleLabel(o.officer.role) + ': ' + o.officer.name : 'No officer mapped' };
           })
@@ -3519,7 +3519,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
               var disp = getMDisb(m);
               var barW = fmt.missing(m.rep) ? 0 : Math.min(100, m.rep);
               mHtml +=
-                '<div class="cd-ov-mcard">' +
+                '<div class="cd-ov-mcard" data-oid="' + (m.oid || '') + '" title="Open ' + escHtml(m.name) + ' in Loans Given" role="button" tabindex="0">' +
                 '<div class="cd-ov-mname">' + m.name + '</div>' +
                 '<div class="cd-ov-mdisb">' + fc(disp) + ' disbursed</div>' +
                 '<div class="cd-ov-mbar"><div class="cd-ov-mbar-fill ' + m.status + '" style="width:' + barW + '%"></div></div>' +
@@ -3527,6 +3527,12 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
                 '</div>';
             }
             mGrid.innerHTML = mHtml;
+            mGrid.onclick = function (e) {
+              var t = e.target;
+              while (t && t !== mGrid && !(t.getAttribute && t.getAttribute('data-oid'))) { t = t.parentNode; }
+              if (!t || t === mGrid) { return; }
+              CeoDash.core.router.goToChapter('loan-journey', [{ level: 'region', id: S.districtId }, { level: 'office', id: t.getAttribute('data-oid') }]);
+            };
           }
           var linksEl = document.getElementById('ov-district-links');
           if (linksEl) {

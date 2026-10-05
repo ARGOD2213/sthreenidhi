@@ -16,7 +16,11 @@ Open link (context root `sthreenidhi`, replaces `AWFPREPORTS`):
     ear/META-INF/            application.xml (context root) + jboss-app.xml
     build.xml                Ant script -> dist/sthreenidhi.ear
     deploy/other-servers-only/   data source / Tomcat samples for machines WITHOUT the live SNBSAP_DS
-    docs/                    EXTERNAL_SITE.md (signed links), ADD_A_DASHBOARD.md, PERFORMANCE.md, office notes
+    docs/                    EXTERNAL_SITE.md (signed links), ADD_A_DASHBOARD.md, PERFORMANCE.md, office notes,
+                             RELEASE_2_DEPLOY.md (overdue + custom Excel: files to copy, what to check),
+                             RECHECK_QUERIES*.sql (read-only checks for the office query tool),
+                             REMOVE_CEO_FROM_AWFPREPORTS.txt, DB_TEAM_QUESTIONS.txt
+    devtools/mock/           local PREVIEW with fake data (node server.js). Never part of the EAR; never copy to the office.
     office-reference/        old office pieces (QueryTool, FrontServlet handler) - not built
 
 ## Open in Eclipse - see docs/ECLIPSE_SETUP.md (new Dynamic Web Project + Tomcat 5.5 test). Quick alternative:

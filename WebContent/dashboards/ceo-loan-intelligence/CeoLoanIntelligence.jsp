@@ -45,10 +45,9 @@
         }
         js.append("]");
 
-        /* TARGET_AMOUNT is stored in a different unit from rupee amounts
-           (FY 2025-26 total 5,713 vs ~95 crore disbursed in one month):
-           most likely crore. Not converted until confirmed. */
-        js.append(",\"targetUnit\":\"unconfirmed (likely crore)\"");
+        /* TARGET_AMOUNT is in crore: checked against what was really given per financial year
+           (FY 2025-26: target 5,713 crore, given 5,750 crore). */
+        js.append(",\"targetUnit\":\"crore\"");
 
         /* State totals: every key of the snapshot totals map */
         Map totals = (Map) bootData.get("totals");
