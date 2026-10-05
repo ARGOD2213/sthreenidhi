@@ -29,6 +29,7 @@ import in.gov.ap.serp.sthreenidhi.dashboard.ceoloan.bean.CeoDashboardSnapshot;
 import in.gov.ap.serp.sthreenidhi.dashboard.ceoloan.cache.CeoDashCache;
 import in.gov.ap.serp.sthreenidhi.dashboard.ceoloan.cache.CeoDashCacheLoader;
 import in.gov.ap.serp.sthreenidhi.dashboard.ceoloan.service.CeoDashboardService;
+import in.gov.ap.serp.sthreenidhi.dashboard.ceoloan.service.CeoDashCustomExport;
 import in.gov.ap.serp.sthreenidhi.dashboard.ceoloan.service.CeoDashExport;
 import in.gov.ap.serp.sthreenidhi.platform.web.GzipSupport;
 import in.gov.ap.serp.sthreenidhi.dashboard.ceoloan.util.CeoLog;
@@ -67,6 +68,13 @@ public class CeoLoanIntelligenceServlet extends HttpServlet {
         if ("refresh".equals(action)) {
             if (!AccessGuard.linkOk(request, DASHBOARD_ID, LinkToken.PURPOSE_ADMIN)) { AccessGuard.denyJson(response); return; }
             plain(action, request, response);
+            return;
+        }
+
+        // custom Excel: the preview (JSON) and the file, built from the snapshot; the token the page was given
+        if ("custom".equals(action) || "customPreview".equals(action)) {
+            if (!AccessGuard.apiOk(request, DASHBOARD_ID)) { AccessGuard.denyJson(response); return; }
+            handleCustom("custom".equals(action), request, response);
             return;
         }
 
@@ -354,6 +362,38 @@ public class CeoLoanIntelligenceServlet extends HttpServlet {
             response.getOutputStream().flush();
         } catch (Exception e) {
             serviceError(response, e, "export");
+        }
+    }
+
+    private static final String[] CUSTOM_PARAMS = { "group", "fromMonth", "toMonth", "districts", "mandals", "project",
+                                                    "cols", "sort", "dir", "top", "trend", "title" };
+
+    // what the user picked in the "Custom Excel" panel; every value is validated inside CeoDashCustomExport
+    private void handleCustom(boolean file, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            Map p = new HashMap();
+            for (int i = 0; i < CUSTOM_PARAMS.length; i++) {
+                String v = Text.checkNullObj(request.getParameter(CUSTOM_PARAMS[i])).trim();
+                if (v.length() > 4000) throw new IllegalArgumentException("a value is too long");
+                p.put(CUSTOM_PARAMS[i], v);
+            }
+            CeoDashCustomExport.Result r = CeoDashCustomExport.run(CeoDashCache.get(), p);
+            if (!file) {
+                response.setHeader("Cache-Control", "no-store");
+                writeJson(response, CeoDashCustomExport.previewJson(r, 8));
+                return;
+            }
+            byte[] xls = CeoDashCustomExport.excel(r);
+            String stamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmm").format(new java.util.Date());
+            response.reset();
+            response.setContentType("application/vnd.ms-excel");
+            response.setHeader("Content-Disposition", "attachment; filename=" + CeoDashCustomExport.fileBase(r) + "_" + stamp + ".xls");
+            response.setHeader("Cache-Control", "no-store");
+            response.setContentLength(xls.length);
+            response.getOutputStream().write(xls);
+            response.getOutputStream().flush();
+        } catch (Exception e) {
+            serviceError(response, e, "custom");
         }
     }
 
