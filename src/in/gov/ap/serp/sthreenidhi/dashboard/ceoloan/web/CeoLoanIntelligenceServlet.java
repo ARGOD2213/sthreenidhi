@@ -342,7 +342,7 @@ public class CeoLoanIntelligenceServlet extends HttpServlet {
                 String group = param(request, "group");
                 String json = service.drill(group, param(request, "districtId"), param(request, "mandalId"),
                         param(request, "voId"), param(request, "shgId"), from, to, param(request, "project"));
-                xls = CeoDashExport.rows(json, param(request, "title"), param(request, "label"), group);
+                xls = CeoDashExport.rows(json, param(request, "title"), param(request, "label"), group, CeoDashCache.get());
                 base = "CEO_" + group.replaceAll("[^A-Za-z]", "");
             }
             String stamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmm").format(new java.util.Date());

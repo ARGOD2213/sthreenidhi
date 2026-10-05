@@ -38,34 +38,57 @@ public final class CeoDashExport {
 
     // ---------------- drill rows (Loans Given, Repayments, Calendar, Top SHGs) ----------------
 
-    public static byte[] rows(String json, String title, String label, String group) throws Exception {
+    public static byte[] rows(String json, String title, String label, String group, CeoDashboardSnapshot snap) throws Exception {
         Map body = (Map) new Json(json).value();
         List rows = (List) body.get("rows");
         Book b = new Book();
 
-        String[] head = { "#", "Name", "ID", "Active women", "Loans", "Amount given (Rs)", "Active loans", "Closed loans",
+        String[] base = { "#", "Name", "ID", "Active women", "Loans", "Amount given (Rs)", "Active loans", "Closed loans",
                           "Women who borrowed", "Repayments", "Collected (Rs)", "UPI (Rs)", "POS (Rs)", "Auto-debit (Rs)",
                           "Manual / cash (Rs)", "Online %", "Target (Rs)" };
+        // overdue is known per district and per mandal only (today's figure, not tied to the period)
+        Map overdue = overdueIndex(snap, group);
+        String[] head = base;
+        if (overdue != null) {
+            head = new String[base.length + 5];
+            System.arraycopy(base, 0, head, 0, base.length);
+            head[17] = "Overdue (Rs)"; head[18] = "Loans in arrears"; head[19] = "Overdue % of open loans";
+            head[20] = "Balance at risk (Rs)"; head[21] = "Total outstanding (Rs)";
+        }
         HSSFSheet sh = b.sheet(sheetName(group), head);
         double[] tot = new double[head.length];
         boolean[] seen = new boolean[head.length];
+        double odOpen = 0;
         for (int i = 0; i < rows.size(); i++) {
             Map r = (Map) rows.get(i);
             double repaid = d(r.get("repaid")), online = d(r.get("upiAmount")) + d(r.get("posAmount")) + d(r.get("autoAmount"));
-            Object[] v = {
+            Object[] v = new Object[head.length];
+            Object[] first = {
                 Double.valueOf(i + 1), s(r.get("name")), s(r.get("id")), r.get("activeMembers"), r.get("loanCount"), r.get("disbursed"),
                 r.get("openLoans"), r.get("closedLoans"), r.get("borrowers"), r.get("repayTxns"), r.get("repaid"),
                 r.get("upiAmount"), r.get("posAmount"), r.get("autoAmount"), Double.valueOf(Math.max(0, repaid - online)),
                 repaid > 0 ? Double.valueOf(Math.round(online / repaid * 1000) / 10.0) : null,
                 r.get("targetCr") == null ? null : Double.valueOf(d(r.get("targetCr")) * 10000000d)
             };
+            System.arraycopy(first, 0, v, 0, first.length);
+            if (overdue != null) {
+                Map od = (Map) overdue.get("DISTRICT".equals(group) ? s(r.get("id")) : s(r.get("districtId")) + "|" + s(r.get("id")));
+                if (od != null) {
+                    double open = d(od.get("statusLoans")), behind = d(od.get("overdueLoans"));
+                    v[17] = od.get("overdueAmount"); v[18] = od.get("overdueLoans");
+                    v[19] = open > 0 ? Double.valueOf(Math.round(behind / open * 1000) / 10.0) : null;
+                    v[20] = od.get("overdueOutstanding"); v[21] = od.get("outstanding");
+                    odOpen += open;
+                }
+            }
             b.row(sh, i + 1, v, i % 2 == 1);
-            for (int c = 3; c < v.length; c++) { if (c != 15 && v[c] instanceof Number) { tot[c] += ((Number) v[c]).doubleValue(); seen[c] = true; } }
+            for (int c = 3; c < v.length; c++) { if (c != 15 && c != 19 && v[c] instanceof Number) { tot[c] += ((Number) v[c]).doubleValue(); seen[c] = true; } }
         }
         Object[] total = new Object[head.length];
         total[1] = "Total";
-        for (int c = 3; c < head.length; c++) { if (c != 15 && seen[c]) total[c] = Double.valueOf(tot[c]); }
+        for (int c = 3; c < head.length; c++) { if (c != 15 && c != 19 && seen[c]) total[c] = Double.valueOf(tot[c]); }
         if (tot[10] > 0) total[15] = Double.valueOf(Math.round((tot[11] + tot[12] + tot[13]) / tot[10] * 1000) / 10.0);
+        if (overdue != null && odOpen > 0) total[19] = Double.valueOf(Math.round(tot[18] / odOpen * 1000) / 10.0);
         b.totalRow(sh, rows.size() + 1, total);
 
         b.info(new String[][] {
@@ -74,9 +97,28 @@ public final class CeoDashExport {
             { "Rows", String.valueOf(rows.size()) },
             { "Payment modes", Boolean.FALSE.equals(body.get("payModes")) ? "not available" : "UPI = Phi PAYMENT SERVICE, POS = PAYTM PAYMENT SERVICE, Auto-debit = SHG AUTO DEBIT PROCESS, rest = manual" },
             { "Scope", "Stree Nidhi projects only (LOAN_TYPE = SN)" },
+            { "Overdue", overdue == null ? "not in this list" : "Overdue = arrears of today's open loans (as on the snapshot date), not tied to the period chosen" },
             { "Downloaded", new SimpleDateFormat("dd-MM-yyyy HH:mm").format(new Date()) }
         });
         return b.bytes();
+    }
+
+    // key -> overdue figures (district id, or "districtId|mandalId"); null when not available for this list
+    static Map overdueIndex(CeoDashboardSnapshot snap, String group) {
+        if (snap == null || !(("DISTRICT".equals(group)) || ("MANDAL".equals(group)))) return null;
+        if (!isOverdueReady(snap)) return null;
+        Map out = new HashMap();
+        List l = "DISTRICT".equals(group) ? snap.getDistricts() : snap.getMandals();
+        for (int i = 0; i < l.size(); i++) {
+            Map m = (Map) l.get(i);
+            out.put("DISTRICT".equals(group) ? s(m.get("id")) : s(m.get("districtId")) + "|" + s(m.get("mandalId")), m);
+        }
+        return out;
+    }
+
+    static boolean isOverdueReady(CeoDashboardSnapshot snap) {
+        Object o = snap == null ? null : snap.getTotals().get("overdueReady");
+        return o instanceof Number && ((Number) o).longValue() == 1;
     }
 
     private static String sheetName(String group) {
@@ -99,9 +141,11 @@ public final class CeoDashExport {
         for (int i = 0; i < ds.size(); i++) { Map d = (Map) ds.get(i); districtName.put(s(d.get("id")), s(d.get("name"))); }
 
         Book b = new Book();
+        boolean odOn = isOverdueReady(snap);
         String[] head = { "District", "Mandal", "Manager", "Manager login", "Emp code", "Role", "AGM", "AGM login", "DGM", "DGM login",
                           "Collected (Rs)", "Online (Rs)", "Manual / cash (Rs)", "Online %", "Cash %", "Amount given (Rs)",
-                          "Target (Rs)", "Target achieved %", "Loans", "Women who borrowed" };
+                          "Target (Rs)", "Target achieved %", "Loans", "Women who borrowed",
+                          "Overdue (Rs)", "Loans in arrears", "Balance at risk (Rs)", "Total outstanding (Rs)" };
         HSSFSheet sh = b.sheet("Mandals", head);
         Map managers = new LinkedHashMap(), agms = new LinkedHashMap(), dgms = new LinkedHashMap();
         List ms = snap.getMandals();
@@ -121,22 +165,24 @@ public final class CeoDashExport {
                 s(m.get("officerRole")), agm, s(m.get("agmUserId")), dgm, s(m.get("dgmUserId")),
                 Double.valueOf(repaid), Double.valueOf(online), Double.valueOf(Math.max(0, repaid - online)),
                 pct(online, repaid), pct(Math.max(0, repaid - online), repaid), Double.valueOf(given),
-                target > 0 ? Double.valueOf(target) : null, pct(given, target), Double.valueOf(loans), Double.valueOf(women)
+                target > 0 ? Double.valueOf(target) : null, pct(given, target), Double.valueOf(loans), Double.valueOf(women),
+                odOn ? m.get("overdueAmount") : null, odOn ? m.get("overdueLoans") : null, odOn ? m.get("overdueOutstanding") : null, odOn ? m.get("outstanding") : null
             };
             b.row(sh, i + 1, v, i % 2 == 1);
-            double[] add = { repaid, online, given, target, loans, women, 1 };
+            double[] add = { repaid, online, given, target, loans, women, 1, d(m.get("overdueAmount")), d(m.get("overdueLoans")), d(m.get("overdueOutstanding")), d(m.get("outstanding")) };
             sum(managers, s(m.get("officerUserId")), mgr.length() > 0 ? mgr : "No officer mapped", s(m.get("officerRole")), add);
             sum(agms, s(m.get("agmUserId")), agm.length() > 0 ? agm : "AGM not mapped", "AGM", add);
             sum(dgms, s(m.get("dgmUserId")), dgm.length() > 0 ? dgm : "DGM not mapped", "DGM", add);
         }
-        people(b, "Managers", managers);
-        people(b, "AGMs", agms);
-        people(b, "DGMs", dgms);
+        people(b, "Managers", managers, odOn);
+        people(b, "AGMs", agms, odOn);
+        people(b, "DGMs", dgms, odOn);
         b.info(new String[][] {
             { "Report", "Employee performance" },
             { "Showing", label },
             { "Sheets", "Mandals (one row per mandal with its owners), Managers, AGMs, DGMs (summed from their mandals)" },
             { "Scope", "Stree Nidhi projects only (LOAN_TYPE = SN)" },
+            { "Overdue", odOn ? "Overdue = arrears of today's open loans (as on the snapshot date), not tied to the period chosen" : "not available" },
             { "Downloaded", new SimpleDateFormat("dd-MM-yyyy HH:mm").format(new Date()) }
         });
         return b.bytes();
@@ -150,9 +196,10 @@ public final class CeoDashExport {
         for (int i = 0; i < add.length; i++) t[i] += add[i];
     }
 
-    private static void people(Book b, String sheet, Map list) {
+    private static void people(Book b, String sheet, Map list, boolean odOn) {
         String[] head = { "#", "Name", "Login", "Role", "Mandals", "Collected (Rs)", "Online (Rs)", "Manual / cash (Rs)", "Online %",
-                          "Cash %", "Amount given (Rs)", "Target (Rs)", "Target achieved %", "Loans", "Women who borrowed" };
+                          "Cash %", "Amount given (Rs)", "Target (Rs)", "Target achieved %", "Loans", "Women who borrowed",
+                          "Overdue (Rs)", "Loans in arrears", "Balance at risk (Rs)", "Total outstanding (Rs)" };
         HSSFSheet sh = b.sheet(sheet, head);
         int n = 0;
         for (Iterator it = list.values().iterator(); it.hasNext();) {
@@ -161,7 +208,8 @@ public final class CeoDashExport {
             double cash = Math.max(0, t[0] - t[1]);
             Object[] v = { Double.valueOf(n + 1), e[0], e[1], e[2], Double.valueOf(t[6]), Double.valueOf(t[0]), Double.valueOf(t[1]),
                            Double.valueOf(cash), pct(t[1], t[0]), pct(cash, t[0]), Double.valueOf(t[2]),
-                           t[3] > 0 ? Double.valueOf(t[3]) : null, pct(t[2], t[3]), Double.valueOf(t[4]), Double.valueOf(t[5]) };
+                           t[3] > 0 ? Double.valueOf(t[3]) : null, pct(t[2], t[3]), Double.valueOf(t[4]), Double.valueOf(t[5]),
+                           odOn ? Double.valueOf(t[7]) : null, odOn ? Double.valueOf(t[8]) : null, odOn ? Double.valueOf(t[9]) : null, odOn ? Double.valueOf(t[10]) : null };
             b.row(sh, ++n, v, n % 2 == 0);
         }
     }
@@ -175,7 +223,7 @@ public final class CeoDashExport {
 
     // ---------------- workbook helper (QueryTool look: dark blue header, banded rows, filters) ----------------
 
-    private static final class Book {
+    static final class Book {
         final HSSFWorkbook wb = new HSSFWorkbook();
         final HSSFCellStyle head, band, plain, bold;
         final List info = new ArrayList();
