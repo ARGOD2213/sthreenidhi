@@ -2309,6 +2309,8 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
         if (ch.group === 'MEMBER') { sub = 'Member ID ' + r.id; }
       }
       r.navId = navId; r.sub = sub;
+      var odEnt = navId && data.byId[navId];
+      r.od = odEnt && odEnt.metrics && odEnt.metrics.od ? odEnt.metrics.od : null;
       return r;
     });
     return { rows: rows, source: res.body.source };
@@ -4127,8 +4129,14 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
       defs.push({ key: 'borrowers', label: 'Women Borrowers', value: fmt.number(t.hasBorrowers ? t.borrowers : NaN), color: '#0284c7', icon: 'borrowers' });
       defs.push({ key: 'open', label: 'Active Loans', value: fmt.number(t.open), color: GREEN, icon: 'active' });
       defs.push({ key: 'closed', label: 'Closed Loans', value: fmt.number(t.closed), color: AMBER, icon: 'closed' });
-      return el('div', { className: 'cd-loan-kpi-row cd-lg-kpis' + (defs.length === 4 ? ' cd-lg-kpis--4' : defs.length === 6 ? ' cd-lg-kpis--6' : '') }, defs.map(function (k) {
-        var card = el('div', withProps({ className: 'cd-loan-kpi-chevron' }, onActivate(function () {
+      var odHere = scope.level === 'state' ? self.data.org.metrics.od : scope.level === 'district' && scope.region ? scope.region.metrics.od
+                 : scope.level === 'mandal' && scope.office ? scope.office.metrics.od : null;
+      if (odHere) {
+        defs.push({ key: 'overdue', label: 'Overdue', value: fmt.compactCr(odHere.amount), color: '#dc2626', icon: 'closed', plain: true,
+                    sub: fmt.number(odHere.loans) + ' loans behind' });
+      }
+      return el('div', { className: 'cd-loan-kpi-row cd-lg-kpis' + (defs.length === 4 ? ' cd-lg-kpis--4' : defs.length === 6 ? ' cd-lg-kpis--6' : defs.length === 7 ? ' cd-lg-kpis--7' : '') }, defs.map(function (k) {
+        var card = el('div', withProps({ className: 'cd-loan-kpi-chevron' }, k.plain ? {} : onActivate(function () {
           self.split({ metric: k.key, title: k.label, color: k.color });
         })), [
           el('div', { className: 'cd-loan-kpi-chevron__body' }, [
@@ -4583,16 +4591,20 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
       remember(ch.group, rows);
       var list = rows.map(function (r) {
         var navId = navIdOf(data, scope, ch.group, r), ent = navId && data.byId[navId];
+        r.od = ent && ent.metrics && ent.metrics.od ? ent.metrics.od : null;
         return { r: r, navId: navId, name: ent ? ent.name : titleCase(r.name || r.id), sub: subOf(data, scope, ch.group, r, navId),
-                 disbursed: r.disbursed || 0, loans: r.loanCount || 0, women: has(r.borrowers) ? r.borrowers : 0, active: r.openLoans || 0 };
+                 disbursed: r.disbursed || 0, loans: r.loanCount || 0, women: has(r.borrowers) ? r.borrowers : 0, active: r.openLoans || 0,
+                 odAmt: r.od ? r.od.amount : 0, odLoans: r.od ? r.od.loans : 0, odOpen: r.od ? r.od.open : 0,
+                 odRate: r.od && r.od.open > 0 ? r.od.loans / r.od.open : 0, hasOd: !!r.od };
       }).filter(function (x) { return x.loans > 0; });
+      var anyOd = list.some(function (x) { return x.hasOd; });
       var pills = el('div', { className: 'cd-cv-pills' });
       var holder = el('div', {});
       var all = false;
       var more = el('button', { type: 'button', className: 'cd-cv-link' });
       function draw() {
         clearBox(pills);
-        [['disbursed', 'Amount given'], ['loans', 'Number of loans'], ['women', 'Women'], ['active', 'Active loans']].forEach(function (o) {
+        [['disbursed', 'Amount given'], ['loans', 'Number of loans'], ['women', 'Women'], ['active', 'Active loans']].concat(anyOd ? [['odAmt', 'Overdue amount'], ['odRate', 'Overdue %']] : []).forEach(function (o) {
           pills.appendChild(el('button', { type: 'button', className: 'cd-cv-pill' + (LG_SORT === o[0] ? ' cd-cv-pill--on' : ''),
             onClick: function () { LG_SORT = o[0]; draw(); } }, o[1]));
         });
@@ -4602,14 +4614,19 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
         clearBox(holder);
         var box = el('div', { className: 'cd-cv-top-list' + (all ? ' cd-cv-scroll cd-cv-scroll--tall' : '') });
         (all ? sorted : sorted.slice(0, 10)).forEach(function (x, i) {
-          var main = key === 'disbursed' ? fmt.compactCr(x.disbursed) : fmt.number(x[key]) + (key === 'loans' ? ' loans' : key === 'women' ? ' women' : ' active');
+          var main = key === 'disbursed' ? fmt.compactCr(x.disbursed)
+                   : key === 'odAmt' ? fmt.compactCr(x.odAmt) + ' overdue'
+                   : key === 'odRate' ? fmt.percent(x.odRate, 1) + ' behind'
+                   : fmt.number(x[key]) + (key === 'loans' ? ' loans' : key === 'women' ? ' women' : ' active');
           var sub = key === 'disbursed' ? fmt.number(x.loans) + (x.loans === 1 ? ' loan' : ' loans') + ' · ' + fmt.number(x.active) + ' active'
+                  : key === 'odAmt' ? fmt.number(x.odLoans) + ' of ' + fmt.number(x.odOpen) + ' open loans behind'
+                  : key === 'odRate' ? fmt.compactCr(x.odAmt) + ' overdue · ' + fmt.number(x.odLoans) + ' loans'
                   : fmt.compactCr(x.disbursed) + ' given';
           box.appendChild(el('div', withProps({ className: 'cd-cv-top-row cd-rp-rank-row', title: x.navId ? 'Open ' + x.name : x.name },
             x.navId ? onActivate(function () { self.go(self.path.concat([{ level: ch.level, id: x.navId }])); }) : {}), [
             el('span', { className: 'cd-cv-top-rank' }, String(i + 1)),
             el('span', { className: 'cd-rp-rank-who' }, [el('strong', {}, x.name), x.sub ? el('em', {}, x.sub) : null]),
-            el('span', { className: 'cd-cv-top-bar' }, [el('i', { style: { width: (max > 0 ? Math.max(3, x[key] / max * 100) : 0) + '%', backgroundColor: '#15803d' } })]),
+            el('span', { className: 'cd-cv-top-bar' }, [el('i', { style: { width: (max > 0 ? Math.max(3, x[key] / max * 100) : 0) + '%', backgroundColor: key === 'odAmt' || key === 'odRate' ? '#dc2626' : '#15803d' } })]),
             el('span', { className: 'cd-cv-top-amt' }, [el('strong', {}, main), el('em', {}, sub)])
           ]));
         });
@@ -4786,6 +4803,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     return rows.map(function (r) {
       var navId = K.navIdOf(data, scope, ch.group, r);
       var ent = navId && data.byId[navId];
+      r.od = ent && ent.metrics && ent.metrics.od ? ent.metrics.od : null;
       return { id: r.id, navId: navId, row: r,
                name: ent ? ent.name : (ch.group === 'DISTRICT' || ch.group === 'MANDAL' ? K.titleCase(r.name) : K.titleCase(r.name || r.id)),
                sub: K.subOf(data, scope, ch.group, r, navId),
@@ -4876,12 +4894,16 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     var holder = el('div', {});
     var all = false;
     var more = el('button', { type: 'button', className: 'cd-cv-link' });
-    var SORTS = [['repaid', 'Collected'], ['txns', 'Repayments']].concat(page.payOn ? [['online', 'Online %'], ['cash', 'Cash %']] : []);
+    var anyOd = ents.some(function (e) { return !!e.row.od; });
+    var SORTS = [['repaid', 'Collected'], ['txns', 'Repayments']].concat(page.payOn ? [['online', 'Online %'], ['cash', 'Cash %']] : [])
+                .concat(anyOd ? [['odAmt', 'Overdue'], ['odRate', 'Overdue %']] : []);
     function val(e, key) {
       var r = e.row;
       if (key === 'txns') { return r.repayTxns || 0; }
       if (key === 'online') { return r.repaid > 0 ? online(r) / r.repaid : -1; }
       if (key === 'cash') { return r.repaid > 0 ? manualOf(r) / r.repaid : -1; }
+      if (key === 'odAmt') { return r.od ? r.od.amount : -1; }
+      if (key === 'odRate') { return r.od && r.od.open > 0 ? r.od.loans / r.od.open : -1; }
       return r.repaid || 0;
     }
     function draw() {
@@ -4898,10 +4920,14 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
       var box = el('div', { className: 'cd-cv-top-list' + (all ? ' cd-cv-scroll cd-cv-scroll--tall' : '') });
       shown.forEach(function (e, i) {
         var r = e.row, v = Math.max(0, val(e, key)), share = onlineShare(r), b = band(share);
+        var od = r.od;
         var main = key === 'txns' ? fmt.number(r.repayTxns) + ' payments' : key === 'online' ? pct(share) + ' online'
+                 : key === 'odAmt' ? (od ? fmt.compactCr(od.amount) + ' overdue' : '\u2014')
+                 : key === 'odRate' ? (od && od.open > 0 ? fmt.percent(od.loans / od.open, 1) + ' behind' : '\u2014')
                  : key === 'cash' ? pct(r.repaid > 0 ? manualOf(r) / r.repaid : NaN) + ' cash' : fmt.compactCr(r.repaid);
         var sub = key === 'repaid' ? fmt.number(r.repayTxns) + ' payments' + (page.payOn ? ' · ' + pct(share) + ' online' : '')
                 : key === 'cash' ? fmt.compactCr(manualOf(r)) + ' of ' + fmt.compactCr(r.repaid)
+                : key === 'odAmt' || key === 'odRate' ? (od ? fmt.number(od.loans) + ' of ' + fmt.number(od.open) + ' open loans behind \u00b7 ' + fmt.compactCr(r.repaid) + ' collected' : '')
                 : fmt.compactCr(r.repaid) + ' collected';
         box.appendChild(el('div', K.withProps({ className: 'cd-cv-top-row cd-rp-rank-row', title: e.navId ? 'Open ' + e.name : e.name },
           e.navId ? K.onActivate(function () { open(page, e); }) : {}), [
@@ -4911,7 +4937,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
             e.sub ? el('em', {}, e.sub) : null
           ]),
           el('span', { className: 'cd-cv-top-bar' }, [el('i', { style: { width: (max > 0 ? Math.max(3, v / max * 100) : 0) + '%',
-            backgroundColor: key === 'cash' ? '#b45309' : key === 'online' ? '#0284c7' : '#2563eb' } })]),
+            backgroundColor: key === 'cash' ? '#b45309' : key === 'online' ? '#0284c7' : key === 'odAmt' || key === 'odRate' ? '#dc2626' : '#2563eb' } })]),
           el('span', { className: 'cd-cv-top-amt' }, [el('strong', {}, main), el('em', {}, sub)]),
           page.payOn ? el('span', { className: 'cd-rp-band', style: { color: BAND_COLOR[b], borderColor: BAND_COLOR[b] } }, BAND_TEXT[b]) : null
         ]));
