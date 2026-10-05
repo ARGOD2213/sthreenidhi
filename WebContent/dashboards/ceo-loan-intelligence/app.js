@@ -3997,7 +3997,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     return el('div', { className: 'cd-loan-header-bar' }, [
       el('div', { className: 'cd-loan-header-info' }, [
         el('h1', { className: 'cd-loan-page-title' }, this.title),
-        el('p', { className: 'cd-loan-page-desc' }, names.join(' › ') + ' - ' + this.periodName)
+        el('p', { className: 'cd-loan-page-desc' }, (this.chapter === 'repayment-journey' ? '' : names.join(' › ') + ' - ') + this.periodName)
       ]),
       el('div', { className: 'cd-lg-period-pick' }, [
         el('div', { className: 'cd-loan-filter-field cd-lg-fy' }, [el('label', { className: 'cd-loan-filter-label' }, 'Financial year'), fySel]),
@@ -4978,34 +4978,41 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     }, 'Loading the SHG...');
   }
 
+  // one card per woman: what she paid, how many payments, and how she paid (UPI / POS / auto-debit / manual)
+  var MODE_COLORS = { upi: '#7c3aed', pos: '#0284c7', auto: '#0d9488', manual: '#b45309' };
   function womenTable(page, rows) {
     var list = rows.filter(function (r) { return (r.repaid || 0) > 0; })
                    .sort(function (a, b) { return (b.repaid || 0) - (a.repaid || 0); });
-    var head = ['#', 'Woman', 'Collected', 'Payments'].concat(page.payOn ? ['UPI', 'POS (Paytm)', 'Auto-debit', 'Manual', 'Online'] : []);
-    var body = list.map(function (r, i) {
-      var cells = [
-        el('td', { className: 'cd-ex-rank' }, String(i + 1)),
-        el('td', {}, [el('div', { className: 'cd-ex-name' }, K.titleCase(r.name || r.id)), el('div', { className: 'cd-ex-sub' }, 'Member ID ' + r.id)]),
-        el('td', { className: 'cd-num' }, fmt.rupees(r.repaid)),
-        el('td', { className: 'cd-num' }, fmt.number(r.repayTxns))
-      ];
+    var cards = list.map(function (r, i) {
+      var total = r.repaid || 0;
+      var parts = [['upi', 'UPI', r.upiAmount || 0], ['pos', 'POS', r.posAmount || 0], ['auto', 'Auto', r.autoAmount || 0], ['manual', 'Cash', manualOf(r)]];
+      var bar = null, legend = null, tag = null;
       if (page.payOn) {
-        var share = onlineShare(r), b = band(share);
-        cells.push(el('td', { className: 'cd-num' }, fmt.rupees(r.upiAmount || 0)), el('td', { className: 'cd-num' }, fmt.rupees(r.posAmount || 0)),
-                   el('td', { className: 'cd-num' }, fmt.rupees(r.autoAmount || 0)), el('td', { className: 'cd-num', style: { color: '#b45309' } }, fmt.rupees(manualOf(r))),
-                   el('td', { className: 'cd-num' }, CeoDash.components.JourneyView.stateBadge(b), ' ', pct(share)));
+        bar = el('div', { className: 'cd-wm-bar' }, parts.map(function (m) {
+          return el('span', { className: 'cd-wm-seg', title: m[1] + ' ' + fmt.compactCr(m[2]), style: { width: (total > 0 ? m[2] / total * 100 : 0) + '%', backgroundColor: MODE_COLORS[m[0]] } });
+        }));
+        legend = el('div', { className: 'cd-wm-legend' }, parts.filter(function (m) { return m[2] > 0; }).map(function (m) {
+          return el('span', {}, [el('i', { style: { backgroundColor: MODE_COLORS[m[0]] } }), m[1] + ' ' + fmt.compactCr(m[2])]);
+        }));
+        tag = CeoDash.components.JourneyView.stateBadge(band(onlineShare(r)));
       }
-      return el('tr', {}, cells);
+      return el('div', { className: 'cd-wm-card' }, [
+        el('div', { className: 'cd-wm-top' }, [
+          el('span', { className: 'cd-wm-rank' }, String(i + 1)),
+          el('div', { className: 'cd-wm-who' }, [el('strong', {}, K.titleCase(r.name || r.id)), el('em', {}, 'Member ID ' + r.id)]),
+          tag
+        ]),
+        el('div', { className: 'cd-wm-amt' }, [el('b', {}, fmt.compactCr(total)), el('span', {}, fmt.number(r.repayTxns) + (r.repayTxns === 1 ? ' payment' : ' payments') +
+          (page.payOn ? ' \u00b7 ' + pct(onlineShare(r)) + ' online' : ''))]),
+        bar, legend
+      ]);
     });
     var paidNone = rows.length - list.length;
     return el('div', { className: 'cd-surface cd-rp-card', style: { marginTop: '18px' } }, [
       el('h3', { className: 'cd-rp-h3' }, 'How each woman paid'),
-      el('p', { className: 'cd-text-muted cd-rp-small' }, list.length + ' women repaid in ' + page.periodName + (paidNone > 0 ? ' · ' + paidNone + ' made no repayment' : '') +
+      el('p', { className: 'cd-text-muted cd-rp-small' }, list.length + ' women repaid in ' + page.periodName + (paidNone > 0 ? ' \u00b7 ' + paidNone + ' made no repayment' : '') +
         '. Largest collections first.'),
-      list.length ? el('div', { className: 'cd-ex-table-wrap' }, [el('table', { className: 'cd-ex-table' }, [
-        el('thead', {}, [el('tr', {}, head.map(function (h) { return el('th', {}, h); }))]),
-        el('tbody', {}, body)
-      ])]) : K.note('No repayments recorded in ' + page.periodName + '.')
+      list.length ? el('div', { className: 'cd-wm-grid' }, cards) : K.note('No repayments recorded in ' + page.periodName + '.')
     ]);
   }
 
@@ -5134,13 +5141,15 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
   ];
   var SORTS = [
     { id: 'online', label: 'Online share' }, { id: 'cash', label: 'Cash share' },
-    { id: 'achievement', label: 'Disbursement vs target' }, { id: 'collected', label: 'Collected' }
+    { id: 'achievement', label: 'Disbursement vs target' }, { id: 'collected', label: 'Collected' },
+    { id: 'overdue', label: 'Overdue %' }
   ];
   var SORT = 'online';
 
   function blankFig() {
     return { target: 0, hasTarget: false, disbursed: 0, loans: 0, open: 0, closed: 0, borrowers: 0, hasBorrowers: true,
-             repaid: 0, txns: 0, upi: 0, pos: 0, auto: 0 };
+             repaid: 0, txns: 0, upi: 0, pos: 0, auto: 0,
+             hasOd: false, odAmt: 0, odLoans: 0, odOpen: 0, odOut: 0, odRisk: 0 };
   }
   function addRow(f, r) {
     if (!r) { return; }
@@ -5149,8 +5158,10 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     if (K.has(r.borrowers)) { f.borrowers += r.borrowers; } else { f.hasBorrowers = false; }
     f.repaid += r.repaid || 0; f.txns += r.repayTxns || 0;
     f.upi += r.upiAmount || 0; f.pos += r.posAmount || 0; f.auto += r.autoAmount || 0;
+    if (r.od) { f.hasOd = true; f.odAmt += r.od.amount; f.odLoans += r.od.loans; f.odOpen += r.od.open; f.odOut += r.od.outstanding; f.odRisk += r.od.atRisk; }
   }
   function finish(f) {
+    f.odRate = f.hasOd && f.odOpen > 0 ? f.odLoans / f.odOpen : NaN;
     f.online = f.upi + f.pos + f.auto;
     f.manual = Math.max(0, f.repaid - f.online);
     f.onlineShare = f.repaid > 0 ? f.online / f.repaid : NaN;
@@ -5205,7 +5216,11 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     });
     (function sum(n) {
       n.fig = blankFig();
-      if (n.kind === 'mandal') { addRow(n.fig, rowFor(n.office)); }
+      if (n.kind === 'mandal') {
+        var mrow = rowFor(n.office);
+        if (mrow && !mrow.od && n.office.metrics) { mrow.od = n.office.metrics.od || null; }
+        addRow(n.fig, mrow);
+      }
       else { n.children.forEach(function (c) { sum(c); addAll(n.fig, c.fig); }); }
       finish(n.fig);
     })(root);
@@ -5215,6 +5230,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     f.target += c.target; f.hasTarget = f.hasTarget || c.hasTarget; f.disbursed += c.disbursed; f.loans += c.loans;
     f.open += c.open; f.closed += c.closed; f.borrowers += c.borrowers; f.hasBorrowers = f.hasBorrowers && c.hasBorrowers;
     f.repaid += c.repaid; f.txns += c.txns; f.upi += c.upi; f.pos += c.pos; f.auto += c.auto;
+    f.hasOd = f.hasOd || c.hasOd; f.odAmt += c.odAmt; f.odLoans += c.odLoans; f.odOpen += c.odOpen; f.odOut += c.odOut; f.odRisk += c.odRisk;
   }
   function counts(n) {
     var c = { agm: 0, officer: 0, mandal: 0 };
@@ -5285,7 +5301,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
       var m = o.metrics || {};
       return { targetCr: m.disbursedTarget > 0 ? m.disbursedTarget / ONE_CRORE : null, disbursed: m.disbursed, loanCount: m.totalLoans,
                openLoans: m.pendingLoans, closedLoans: m.closedLoans, borrowers: fmt.missing(m.activeBorrowers) ? null : m.activeBorrowers,
-               repaid: m.receivedRepayment, repayTxns: m.repayTxns };
+               repaid: m.receivedRepayment, repayTxns: m.repayTxns, od: m.od || null };
     });
   }
 
@@ -5306,6 +5322,9 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     cards.push(card('🛡️', 'Collected', fmt.compactCr(f.repaid), fmt.number(f.txns) + ' repayments · FY ' + ex.fyLabel(sy), '#15803d'));
     cards.push(card('🎯', 'Disbursed vs target', pct(f.achievement), fmt.compactCr(f.disbursed) + (f.hasTarget ? ' of ' + fmt.compactCr(f.target) : ' · no target'), '#7c3aed'));
     cards.push(card('👩', 'Women borrowers', fmt.number(f.hasBorrowers ? f.borrowers : NaN), fmt.number(f.loans) + ' loans · ' + fmt.number(f.open) + ' active', '#0891b2'));
+    if (f.hasOd) {
+      cards.push(card('⚠️', 'Overdue', fmt.compactCr(f.odAmt), fmt.number(f.odLoans) + ' loans behind' + (fmt.missing(f.odRate) ? '' : ' · ' + fmt.percent(f.odRate, 1) + ' of open'), '#dc2626'));
+    }
     return el('div', { className: 'cd-repay-kpi-grid cd-em-kpis' }, cards);
   }
 
@@ -5340,6 +5359,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     if (SORT === 'cash') { return fmt.missing(f.cashShare) ? -1 : f.cashShare; }
     if (SORT === 'achievement') { return fmt.missing(f.achievement) ? -1 : f.achievement; }
     if (SORT === 'collected') { return f.repaid; }
+    if (SORT === 'overdue') { return fmt.missing(f.odRate) ? -1 : f.odRate; }
     return fmt.missing(f.onlineShare) ? -1 : f.onlineShare;
   }
 
@@ -5373,7 +5393,8 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
         el('div', {}, [el('span', {}, 'Collected'), el('strong', {}, fmt.compactCr(f.repaid))]),
         payOn ? el('div', {}, [el('span', {}, 'Cash / manual'), el('strong', { style: { color: '#b45309' } }, fmt.compactCr(f.manual) + ' · ' + pct(f.cashShare))]) : null,
         el('div', {}, [el('span', {}, 'Disbursed'), el('strong', {}, fmt.compactCr(f.disbursed) + (fmt.missing(ach) ? '' : ' · ' + fmt.percent(ach) + ' of target'))]),
-        el('div', {}, [el('span', {}, 'Women borrowers'), el('strong', {}, fmt.number(f.hasBorrowers ? f.borrowers : NaN))])
+        el('div', {}, [el('span', {}, 'Women borrowers'), el('strong', {}, fmt.number(f.hasBorrowers ? f.borrowers : NaN))]),
+        f.hasOd ? el('div', {}, [el('span', {}, 'Overdue'), el('strong', { style: { color: '#b91c1c' } }, fmt.compactCr(f.odAmt) + (fmt.missing(f.odRate) ? '' : ' · ' + fmt.percent(f.odRate, 1) + ' of loans'))]) : null
       ]),
       fmt.missing(ach) ? null : el('div', { className: 'cd-em-target' }, [el('div', { style: { width: Math.min(100, Math.round(ach * 100)) + '%' } })]),
       el('div', { className: 'cd-em-open' }, n.kind === 'mandal' ? 'Open collections ›' : 'Open ›')
@@ -5386,7 +5407,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     return el('div', { className: 'cd-cv-top-list' }, kids.map(function (k, i) {
       var f = k.fig, b = BAND[payOn ? bandOf(f) : 'no-data'], v = Math.max(0, sortValue(k));
       var main = SORT === 'cash' ? pct(f.cashShare) + ' cash' : SORT === 'achievement' ? pct(f.achievement) + ' of target'
-               : SORT === 'collected' ? fmt.compactCr(f.repaid) : pct(f.onlineShare) + ' online';
+               : SORT === 'overdue' ? pct(f.odRate) + ' behind' : SORT === 'collected' ? fmt.compactCr(f.repaid) : pct(f.onlineShare) + ' online';
       var sub = fmt.compactCr(f.repaid) + ' collected' + (payOn ? ' · ' + fmt.compactCr(f.manual) + ' cash' : '') +
                 ' · ' + fmt.compactCr(f.disbursed) + ' given';
       return el('div', K.withProps({ className: 'cd-cv-top-row cd-rp-rank-row', title: 'Open the collections of ' + k.name }, K.onActivate(function () {
@@ -5394,7 +5415,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
       })), [
         el('span', { className: 'cd-cv-top-rank' }, String(i + 1)),
         el('span', { className: 'cd-rp-rank-who' }, [el('strong', {}, k.name), el('em', {}, k.role)]),
-        el('span', { className: 'cd-cv-top-bar' }, [el('i', { style: { width: (max > 0 ? Math.max(3, v / max * 100) : 0) + '%', backgroundColor: SORT === 'cash' ? '#b45309' : b.color } })]),
+        el('span', { className: 'cd-cv-top-bar' }, [el('i', { style: { width: (max > 0 ? Math.max(3, v / max * 100) : 0) + '%', backgroundColor: SORT === 'cash' ? '#b45309' : SORT === 'overdue' ? '#dc2626' : b.color } })]),
         el('span', { className: 'cd-cv-top-amt' }, [el('strong', {}, main), el('em', {}, sub)]),
         payOn ? el('span', { className: 'cd-rp-band', style: { color: b.color, borderColor: b.color } }, b.label) : null
       ]);
@@ -6113,7 +6134,7 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
         return na !== nb ? na - nb : sortValue(b) - sortValue(a);
       });
       var childKind = CHILD_OF[cur.kind];
-      var sorts = el('div', { className: 'cd-ex-pills' }, SORTS.filter(function (s) { return payOn || (s.id !== 'online' && s.id !== 'cash'); }).map(function (s) {
+      var sorts = el('div', { className: 'cd-ex-pills' }, SORTS.filter(function (s) { return (payOn || (s.id !== 'online' && s.id !== 'cash')) && (s.id !== 'overdue' || CeoDash.data.OD_READY === true); }).map(function (s) {
         return el('button', { type: 'button', className: 'cd-toggle-btn' + (SORT === s.id ? ' cd-ex-on' : ''),
                               onClick: function () { SORT = s.id; CeoDash.core.state.set({}); } }, s.label);
       }));
@@ -7335,8 +7356,9 @@ var CEO_ASSET_BASE = (window.__CEO_CTX || '') + '/Assets/Images/';
     global.document.body.appendChild(panel);
     global.document.body.appendChild(fab);
 
+    global.setTimeout(function () { fab.className = 'cd-cx-fab cd-cx-fab--min'; }, 7000);
     function open() { render(); panel.className = 'cd-cx-panel cd-cx-panel--open'; backdrop.className = 'cd-cx-backdrop cd-cx-backdrop--on'; fab.style.display = 'none'; }
-    function close() { panel.className = 'cd-cx-panel'; backdrop.className = 'cd-cx-backdrop'; fab.style.display = ''; }
+    function close() { panel.className = 'cd-cx-panel'; backdrop.className = 'cd-cx-backdrop'; fab.style.display = ''; fab.className = 'cd-cx-fab cd-cx-fab--min'; }
     fab.onclick = open; closeBtn.onclick = close; backdrop.onclick = close;
     global.document.addEventListener('keydown', function (e) { if ((e.keyCode === 27) && panel.className.indexOf('--open') !== -1) { close(); } }, false);
 
