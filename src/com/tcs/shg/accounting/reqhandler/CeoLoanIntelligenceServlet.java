@@ -32,6 +32,7 @@ import com.tcs.shg.ceo.service.CeoDashboardService;
 import com.tcs.shg.ceo.service.CeoDashExport;
 import com.tcs.shg.ceo.util.CeoGzip;
 import com.tcs.shg.ceo.util.CeoLog;
+import com.tcs.shg.ceo.util.CeoResponseCache;
 import com.tcs.shg.ceo.util.CeoText;
 
 public class CeoLoanIntelligenceServlet extends HttpServlet {
@@ -56,10 +57,94 @@ public class CeoLoanIntelligenceServlet extends HttpServlet {
         if ("export".equals(action)) { handleExport(request, response); return; }
         if ("asset".equals(action))  { handleAsset(request, response);  return; }
 
-        // the page and the JSON answers are collected and sent compressed
+        // status / refresh are tiny and always live; everything else can be answered from the cache
+        if ("status".equals(action) || "refresh".equals(action)) { plain(action, request, response); return; }
+        handleCacheable(action, request, response);
+    }
+
+    // not cached: collected and sent compressed when the browser accepts it
+    private void plain(String action, HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
         if (!CeoGzip.accepted(request)) { route(action, request, response); return; }
         CeoGzip.Buffered out = new CeoGzip.Buffered(request, response);
+        try {
+            route(action, request, out);
+        } finally {
+            out.finish();
+        }
+    }
+
+    // ---- fast path: the page and the JSON answers only change with a new snapshot ----
+
+    // set when this class is loaded, so a new deploy never gets "304 not modified" for an old page
+    private static final long STARTED = System.currentTimeMillis();
+    private static final int  MAX_PARAM_LENGTH = 200;
+    private static final String[] JSON_PARAMS = { "group", "districtId", "mandalId", "voId", "shgId", "from", "to",
+                                                  "project", "memberId", "mandals" };
+
+    private static boolean isJsonAction(String a) {
+        return "getBorrowers".equals(a) || "drill".equals(a) || "member".equals(a) || "shg".equals(a)
+            || "trend".equals(a) || "keyedBy".equals(a);
+    }
+
+    private static long jsonMaxAgeSeconds() {
+        String p = System.getProperty("ceo.dash.json.maxage.seconds");
+        if (p == null || p.trim().length() == 0) return 300L;
+        try { return Math.max(0L, Long.parseLong(p.trim())); } catch (Exception e) { return 300L; }
+    }
+
+    // null = this request is not cacheable (no snapshot yet, or odd parameters)
+    private static String cacheKey(String action, HttpServletRequest request, CeoDashboardSnapshot snap) {
+        StringBuffer k = new StringBuffer();
+        if (isJsonAction(action)) {
+            k.append("json|").append(action).append('|').append(snap.getBuiltAtMillis());
+            for (int i = 0; i < JSON_PARAMS.length; i++) {
+                String v = param(request, JSON_PARAMS[i]);
+                if (v.length() > MAX_PARAM_LENGTH) return null;
+                k.append('|').append(v);
+            }
+        } else {
+            String chapter = param(request, "chapter");
+            if (chapter.length() > 20 || !chapter.matches("[0-9A-Za-z_-]*")) return null;
+            // the day is part of the key in case the page shows "today" from the server clock
+            k.append("page|").append(STARTED).append('|').append(snap.getBuiltAtMillis()).append('|').append(chapter)
+             .append('|').append(new java.text.SimpleDateFormat("yyyyMMdd").format(new java.util.Date()));
+        }
+        return k.toString();
+    }
+
+    private void handleCacheable(String action, HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        CeoDashboardSnapshot snap = CeoResponseCache.enabled() ? CeoDashCache.get() : null;
+        String key = snap == null ? null : cacheKey(action, request, snap);
+        if (key == null) { plain(action, request, response); return; }
+
+        boolean json = isJsonAction(action);
+        String etag = CeoResponseCache.etagOf(key);
+        String cc = json ? "private, max-age=" + jsonMaxAgeSeconds() : "no-cache";
+
+        if (CeoResponseCache.notModified(request, etag)) {
+            CeoResponseCache.sendNotModified(response, etag, cc);
+            return;
+        }
+        CeoResponseCache.Entry hit = CeoResponseCache.get(key);
+        if (hit != null) {
+            CeoResponseCache.send(request, response, hit, cc);
+            return;
+        }
+
+        // first time for this snapshot: build the answer once, keep it, send it
+        CeoGzip.Buffered out = new CeoGzip.Buffered(request, response);
         route(action, request, out);
+        if (out.statusCode() == HttpServletResponse.SC_OK && !response.isCommitted()) {
+            byte[] body = out.body();
+            if (body.length > 0 && body.length <= CeoResponseCache.MAX_BODY_BYTES) {
+                CeoResponseCache.Entry e = CeoResponseCache.build(body, out.contentType(), etag);
+                CeoResponseCache.put(key, e);
+                CeoResponseCache.send(request, response, e, cc);
+                return;
+            }
+        }
         out.finish();
     }
 

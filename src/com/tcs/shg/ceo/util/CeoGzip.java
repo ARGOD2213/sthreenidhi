@@ -68,6 +68,8 @@ public final class CeoGzip {
         private final ByteArrayOutputStream buf = new ByteArrayOutputStream(64 * 1024);
         private PrintWriter writer;
         private ServletOutputStream stream;
+        private int status = HttpServletResponse.SC_OK;
+        private String contentType;
 
         public Buffered(HttpServletRequest request, HttpServletResponse response) {
             super(response);
@@ -96,6 +98,21 @@ public final class CeoGzip {
 
         // the real length is only known once the body is complete
         public void setContentLength(int len) { }
+
+        public void setStatus(int sc) { status = sc; super.setStatus(sc); }
+        public void setStatus(int sc, String msg) { status = sc; super.setStatus(sc, msg); }
+        public void sendError(int sc) throws IOException { status = sc; super.sendError(sc); }
+        public void sendError(int sc, String msg) throws IOException { status = sc; super.sendError(sc, msg); }
+        public void sendRedirect(String location) throws IOException { status = HttpServletResponse.SC_FOUND; super.sendRedirect(location); }
+        public void setContentType(String type) { contentType = type; super.setContentType(type); }
+
+        // what the handler wrote, for the response cache
+        public int statusCode() { return status; }
+        public String contentType() { return contentType; }
+        public byte[] body() {
+            if (writer != null) writer.flush();
+            return buf.toByteArray();
+        }
 
         public void flushBuffer() {
             if (writer != null) writer.flush();

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Builds dist/sthreenidhi.ear for JBoss 5.0.  Runs inside Eclipse (it ships with Ant):
+    right-click build.xml -> Run As -> Ant Build   (default target: ear)
+
+  Targets
+    ear      uses the classes Eclipse already compiled in build/classes (Project -> Build Automatically)
+    ear-javac  compiles with the JDK's javac (source/target 1.6) first; needs Ant to run on a JDK, not a JRE
+-->
+<project name="sthreenidhi" default="ear" basedir=".">
+
+  <property name="context.root" value="/sthreenidhi"/>
+  <property name="classes.dir"  value="build/classes"/>
+  <property name="dist.dir"     value="dist"/>
+  <property name="java.level"   value="1.6"/>
+
+  <path id="compile.cp">
+    <fileset dir="lib-provided" includes="*.jar"/>
+    <fileset dir="WebContent/WEB-INF/lib" includes="*.jar"/>
+  </path>
+
+  <target name="clean">
+    <delete dir="${dist.dir}"/>
+    <delete file="build/sthreenidhi.war"/>
+    <delete dir="build/ear"/>
+  </target>
+
+  <target name="compile">
+    <mkdir dir="${classes.dir}"/>
+    <javac srcdir="src" destdir="${classes.dir}" source="${java.level}" target="${java.level}" encoding="UTF-8"
+           debug="true" includeantruntime="false" classpathref="compile.cp"/>
+  </target>
+
+  <target name="check-classes">
+    <available file="${classes.dir}/com/tcs/shg/accounting/reqhandler/CeoLoanIntelligenceServlet.class"
+               property="classes.present"/>
+    <fail unless="classes.present"
+          message="No compiled classes in build/classes. In Eclipse: Project -> Build Automatically (or Build Project), then run again."/>
+  </target>
+
+  <target name="war" depends="check-classes">
+    <mkdir dir="${dist.dir}"/>
+    <war destfile="build/sthreenidhi.war" webxml="WebContent/WEB-INF/web.xml" duplicate="fail">
+      <fileset dir="WebContent" excludes="WEB-INF/web.xml,WEB-INF/lib/**"/>
+      <lib dir="WebContent/WEB-INF/lib"/>
+      <classes dir="${classes.dir}"/>
+    </war>
+  </target>
+
+  <target name="ear" depends="war">
+    <mkdir dir="build/ear/META-INF"/>
+    <copy todir="build/ear/META-INF">
+      <fileset dir="ear/META-INF"/>
+      <filterset><filter token="CONTEXT_ROOT" value="${context.root}"/></filterset>
+    </copy>
+    <ear destfile="${dist.dir}/sthreenidhi.ear" appxml="build/ear/META-INF/application.xml">
+      <fileset dir="build" includes="sthreenidhi.war"/>
+      <metainf dir="build/ear/META-INF" includes="jboss-app.xml"/>
+    </ear>
+    <echo message="Built ${dist.dir}/sthreenidhi.ear  (context root ${context.root})"/>
+  </target>
+
+  <target name="ear-javac" depends="compile,ear"/>
+</project>

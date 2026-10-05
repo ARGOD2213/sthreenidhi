@@ -1,45 +1,54 @@
-# Sthreenidhi (CEO Loan Intelligence) - Java 6 / JBoss 5 EAR
+# Sthreenidhi (CEO Loan Intelligence) - Java 6 / JBoss 5 EAR, Eclipse project
 
-Public URL (context root `sthreenidhi`, replaces `AWFPREPORTS`):
+Open link (context root `sthreenidhi`, replaces `AWFPREPORTS`):
 
     https://<host>/sthreenidhi/CeoLoanIntelligence?action=page
 
 ## Layout
 
-    pom.xml                      parent build (Java 6 source/target)
-    sthreenidhi-web/             WAR: servlet, listener, DAO, cache, JSP, WEB-INF
-    sthreenidhi-ear/             EAR wrapper: sets context root, jboss-app.xml
-    deploy/sthreenidhi-ds.xml    JBoss data source (DB URL + user + PASSWORD) - NOT inside the EAR
-    docs/                        office README (counting rules, log lines, -D options)
-    office-reference/            old office pieces (QueryTool, FrontServlet handler) - not built
+    src/                 Java sources (Java 6 only)
+    WebContent/          JSP, app.js, app.css, WEB-INF (web.xml, jboss-web.xml, lib/ = POI + codec)
+    lib-provided/        servlet-api / jsp-api: for compiling only, NOT packaged (JBoss supplies them)
+    ear/META-INF/        application.xml (context root) + jboss-app.xml
+    build.xml            Ant script that makes dist/sthreenidhi.ear
+    deploy/              sthreenidhi-ds.xml  (database URL / user / password, goes next to the EAR)
+    docs/                office README (counting rules, log lines, -D options) and PERFORMANCE.md
+    office-reference/    old office pieces (QueryTool, FrontServlet handler) - not built
 
-## Build (JDK 6, Maven 3.0 - 3.2.x; Maven 3.3+ needs JDK 7+)
+## Open in Eclipse (no Maven, no server plug-in needed)
 
-    mvn clean package
+1. File -> Import -> General -> Existing Projects into Workspace -> pick this folder.
+2. Project -> Properties -> Java Build Path -> Libraries: the JRE entry must be your **JDK 6**
+   (Window -> Preferences -> Java -> Installed JREs -> add the JDK 6 folder if missing).
+   Compiler compliance is already set to 1.6 (`.settings/org.eclipse.jdt.core.prefs`).
+3. Project -> Build Automatically (classes go to `build/classes`).
 
-Result: `sthreenidhi-ear/target/sthreenidhi.ear`
+## Build the EAR
 
-To change the URL path, edit `app.context.root` in the parent `pom.xml`.
+Right-click `build.xml` -> Run As -> Ant Build -> default target `ear`.
+Result: `dist/sthreenidhi.ear`.
+
+- Target `ear-javac` compiles with javac first (only if Ant is running on a JDK; Eclipse's own
+  compile + `ear` is the normal route).
+- Another URL path: run the Ant build with `-Dcontext.root=/other` (Run As -> Ant Build... -> Properties).
 
 ## Deploy on JBoss 5.0
 
-1. Copy `deploy/sthreenidhi-ds.xml` to `<JBOSS_HOME>/server/<profile>/deploy/` and edit
-   host, user and password (the three `CHANGE_ME` values).
+1. Copy `deploy/sthreenidhi-ds.xml` to `<JBOSS_HOME>/server/<profile>/deploy/`, edit host, user and
+   password (the three `CHANGE_ME` values). The password lives only there.
 2. Put the SQL Server JDBC driver (`sqljdbc4.jar` or jtds) in `<JBOSS_HOME>/server/<profile>/lib/`.
-3. Copy `sthreenidhi.ear` to the same `deploy/` folder.
-4. Optional JBoss options (`bin/run.conf`): `-Dceo.dash.refresh.hour=8` and the others in
-   `docs/CEO_Dashboard_Office_README.md` section 10.
-5. Open `.../sthreenidhi/CeoLoanIntelligence?action=status`: `ready=true` once the first
-   snapshot is built (about 20 minutes on first start).
+3. Copy `dist/sthreenidhi.ear` into the same `deploy/` folder.
+4. Settings and JVM tuning: `docs/PERFORMANCE.md`, `docs/CEO_Dashboard_Office_README.md` section 10.
+5. Open `.../sthreenidhi/CeoLoanIntelligence?action=status` - `ready=true` once the first snapshot is built.
 
 The data source is bound as `java:/SNBSAP_DS`; the web app maps it through `resource-ref SNBSAP_DS`.
 
 ## Still to copy in from the office
 
-The dashboard page itself is not in this repo yet. Replace these placeholders with the office files:
+Replace these placeholders with the office files (same names and folders):
 
-- `sthreenidhi-web/src/main/webapp/accounting/CeoLoanIntelligence.jsp`
-- `sthreenidhi-web/src/main/webapp/scripts/app.js`
-- `sthreenidhi-web/src/main/webapp/css/app.css`
+- `WebContent/accounting/CeoLoanIntelligence.jsp`
+- `WebContent/scripts/app.js`
+- `WebContent/css/app.css`
 
-If the JSP or `app.js` contain `/AWFPREPORTS/` anywhere, change it to use `request.getContextPath()`.
+If the JSP or `app.js` contain `/AWFPREPORTS/`, change it to `request.getContextPath()`.

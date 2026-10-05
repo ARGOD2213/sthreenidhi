@@ -8,6 +8,7 @@ package com.tcs.shg.ceo.cache;
 
 import com.tcs.shg.ceo.bean.CeoDashboardSnapshot;
 import com.tcs.shg.ceo.util.CeoLog;
+import com.tcs.shg.ceo.util.CeoResponseCache;
 
 public final class CeoDashCache {
     private CeoDashCache() { }
@@ -39,6 +40,7 @@ public final class CeoDashCache {
             return;
         }
         CURRENT = snap;
+        CeoResponseCache.clear();
         lastSuccessMillis = System.currentTimeMillis();
         lastError = "";
         CeoLog.info("Snapshot PUBLISHED  fy=" + snap.getFyLabel()
