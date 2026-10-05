@@ -36,7 +36,7 @@ Result: `dist/sthreenidhi.ear`.
 
 1. Copy `deploy/sthreenidhi-ds.xml` to `<JBOSS_HOME>/server/<profile>/deploy/`, edit host, user and
    password (the three `CHANGE_ME` values). The password lives only there.
-2. Put the SQL Server JDBC driver (`sqljdbc4.jar` or jtds) in `<JBOSS_HOME>/server/<profile>/lib/`.
+2. Put `jtds-1.3.1.jar` (same as the office AWFPREPORTS uses) in `<JBOSS_HOME>/server/<profile>/lib/`. Not `mssql-jdbc ...jre8.jar` - that needs Java 8.
 3. Copy `dist/sthreenidhi.ear` into the same `deploy/` folder.
 4. Settings and JVM tuning: `docs/PERFORMANCE.md`, `docs/CEO_Dashboard_Office_README.md` section 10.
 5. Open `.../sthreenidhi/CeoLoanIntelligence?action=status` - `ready=true` once the first snapshot is built.

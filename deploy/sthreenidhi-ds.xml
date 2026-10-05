@@ -3,8 +3,10 @@
   Copy this file to  <JBOSS_HOME>/server/<profile>/deploy/  next to the EAR.
   Edit the three CHANGE_ME values. The password stays here, not in the application.
 
-  Needs the Microsoft SQL Server JDBC driver (sqljdbc4.jar, or jtds) in
-  <JBOSS_HOME>/server/<profile>/lib/ - the queries are T-SQL.
+  Needs a SQL Server JDBC driver that runs on Java 6, in <JBOSS_HOME>/server/<profile>/lib/ :
+  jtds-1.3.1.jar (the one the office AWFPREPORTS already uses) - default below.
+  Do NOT use mssql-jdbc-7.4.1.jre8.jar: it needs Java 8.
+  Microsoft sqljdbc4.jar (v4.0) also works on Java 6; its settings are in the comment.
 
   The application finds it as java:/SNBSAP_DS (JNDI name below).
 -->
@@ -12,8 +14,11 @@
   <local-tx-datasource>
     <jndi-name>SNBSAP_DS</jndi-name>
 
-    <connection-url>jdbc:sqlserver://CHANGE_ME_HOST:1433;databaseName=SNBSAP</connection-url>
-    <driver-class>com.microsoft.sqlserver.jdbc.SQLServerDriver</driver-class>
+    <connection-url>jdbc:jtds:sqlserver://CHANGE_ME_HOST:1433/SNBSAP</connection-url>
+    <driver-class>net.sourceforge.jtds.jdbc.Driver</driver-class>
+    <!-- sqljdbc4.jar instead:
+         <connection-url>jdbc:sqlserver://CHANGE_ME_HOST:1433;databaseName=SNBSAP</connection-url>
+         <driver-class>com.microsoft.sqlserver.jdbc.SQLServerDriver</driver-class> -->
     <user-name>CHANGE_ME_USER</user-name>
     <password>CHANGE_ME_PASSWORD</password>
 
