@@ -32,7 +32,7 @@
   </target>
 
   <target name="check-classes">
-    <available file="${classes.dir}/com/tcs/shg/accounting/reqhandler/CeoLoanIntelligenceServlet.class"
+    <available file="${classes.dir}/in/gov/ap/serp/sthreenidhi/dashboard/ceoloan/web/CeoLoanIntelligenceServlet.class"
                property="classes.present"/>
     <fail unless="classes.present"
           message="No compiled classes in build/classes. In Eclipse: Project -> Build Automatically (or Build Project), then run again."/>

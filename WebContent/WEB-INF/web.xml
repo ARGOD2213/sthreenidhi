@@ -1,23 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<web-app xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
-         version="2.5">
+<!-- Servlet 2.4: runs on Tomcat 5.5 and on JBoss 5.0 -->
+<web-app xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
+         version="2.4">
   <display-name>Sthreenidhi</display-name>
 
-  <!-- 1. pre-warming listener: builds / restores the dashboard snapshot in the background -->
-  <listener>
-    <listener-class>com.tcs.shg.ceo.listener.CeoDashStartupListener</listener-class>
-  </listener>
+  <!--
+    One block per dashboard. To add a dashboard, copy this block and the dashboard's own
+    servlet / listener (see docs/ADD_A_DASHBOARD.md).
+  -->
 
-  <!-- 2. CEO Loan Intelligence: https://host/sthreenidhi/CeoLoanIntelligence?action=page -->
+  <!-- ===== Dashboard: CEO Loan Intelligence  (id: ceo-loan-intelligence) ===== -->
+  <listener>
+    <listener-class>in.gov.ap.serp.sthreenidhi.dashboard.ceoloan.listener.CeoDashStartupListener</listener-class>
+  </listener>
   <servlet>
     <servlet-name>CeoLoanIntelligenceServlet</servlet-name>
-    <servlet-class>com.tcs.shg.accounting.reqhandler.CeoLoanIntelligenceServlet</servlet-class>
+    <servlet-class>in.gov.ap.serp.sthreenidhi.dashboard.ceoloan.web.CeoLoanIntelligenceServlet</servlet-class>
   </servlet>
   <servlet-mapping>
     <servlet-name>CeoLoanIntelligenceServlet</servlet-name>
     <url-pattern>/CeoLoanIntelligence</url-pattern>
   </servlet-mapping>
+  <!-- ===== end: CEO Loan Intelligence ===== -->
 
   <session-config>
     <session-timeout>30</session-timeout>
@@ -27,7 +32,7 @@
     <welcome-file>index.jsp</welcome-file>
   </welcome-file-list>
 
-  <!-- database: the data source itself (URL, user, password) lives in JBoss deploy/sthreenidhi-ds.xml -->
+  <!-- database: URL / user / password live in the server (JBoss deploy/sthreenidhi-ds.xml or Tomcat context), not here -->
   <resource-ref>
     <description>SNBSAP database</description>
     <res-ref-name>SNBSAP_DS</res-ref-name>

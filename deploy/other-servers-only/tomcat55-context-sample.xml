@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Local testing on Tomcat 5.5 (not used on JBoss).
+  Save as  <TOMCAT_HOME>/conf/Catalina/localhost/sthreenidhi.xml  (the file name is the URL path),
+  set docBase to your exploded WebContent folder or the WAR, and fill the CHANGE_ME values.
+  Put jtds-1.3.1.jar in <TOMCAT_HOME>/common/lib/ .
+  Optional for local tests: -Dsthreenidhi.token.secret=... (see docs/EXTERNAL_SITE.md); without it the dashboard is open.
+-->
+<Context docBase="C:/path/to/sthreenidhi/WebContent" reloadable="false">
+  <Resource name="SNBSAP_DS" auth="Container" type="javax.sql.DataSource"
+            driverClassName="net.sourceforge.jtds.jdbc.Driver"
+            url="jdbc:jtds:sqlserver://CHANGE_ME_HOST:1433/SNBSAP"
+            username="CHANGE_ME_USER" password="CHANGE_ME_PASSWORD"
+            maxActive="10" maxIdle="2" maxWait="10000"/>
+</Context>

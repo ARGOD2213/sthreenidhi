@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE jboss-web
+PUBLIC "-//JBoss//DTD Web Application 2.3V2//EN"
+"http://www.jboss.org/j2ee/dtd/jboss-web_3_2.dtd">
 <jboss-web>
-  <!-- also used when the WAR is deployed on its own; inside the EAR, application.xml decides -->
-  <context-root>/sthreenidhi</context-root>
-  <resource-ref>
-    <res-ref-name>SNBSAP_DS</res-ref-name>
-    <jndi-name>java:/SNBSAP_DS</jndi-name>
-  </resource-ref>
+ <!-- same virtual host as AWFPREPORTS (serp.ap.gov.in), different path -->
+ <context-root>/sthreenidhi</context-root>
+ <virtual-host>serpap-host</virtual-host>
+ <!-- the live JBoss already has the SNBSAP_DS data source (deploy/*-ds.xml); this only maps the name -->
+ <resource-ref>
+  <res-ref-name>SNBSAP_DS</res-ref-name>
+  <jndi-name>java:/SNBSAP_DS</jndi-name>
+ </resource-ref>
 </jboss-web>

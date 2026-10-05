@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  NOT NEEDED on the live JBoss: it already has SNBSAP_DS (user SNBSAP_QT, jTDS, pool 5-50).
+  Deploying a second data source with the same JNDI name would fail.
+  Use this file only on a server that does not have SNBSAP_DS (a test machine, a new server).
+  Copy to <JBOSS_HOME>/server/<profile>/deploy/ and fill the CHANGE_ME values.
+  Driver: jtds-1.3.1.jar in <JBOSS_HOME>/server/<profile>/lib/ (Java 6; not the jre8 Microsoft driver).
+-->
+<datasources>
+  <local-tx-datasource>
+    <jndi-name>SNBSAP_DS</jndi-name>
+    <connection-url>jdbc:jtds:sqlserver://CHANGE_ME_HOST:1433/SNBSAP</connection-url>
+    <driver-class>net.sourceforge.jtds.jdbc.Driver</driver-class>
+    <user-name>CHANGE_ME_USER</user-name>
+    <password>CHANGE_ME_PASSWORD</password>
+    <min-pool-size>5</min-pool-size>
+    <max-pool-size>50</max-pool-size>
+    <blocking-timeout-millis>3000</blocking-timeout-millis>
+    <idle-timeout-minutes>2</idle-timeout-minutes>
+    <metadata>
+      <type-mapping>MS SQLSERVER2017</type-mapping>
+    </metadata>
+  </local-tx-datasource>
+</datasources>
