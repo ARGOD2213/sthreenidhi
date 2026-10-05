@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+         version="2.5">
+  <display-name>Sthreenidhi</display-name>
+
+  <!-- 1. pre-warming listener: builds / restores the dashboard snapshot in the background -->
+  <listener>
+    <listener-class>com.tcs.shg.ceo.listener.CeoDashStartupListener</listener-class>
+  </listener>
+
+  <!-- 2. CEO Loan Intelligence: https://host/sthreenidhi/CeoLoanIntelligence?action=page -->
+  <servlet>
+    <servlet-name>CeoLoanIntelligenceServlet</servlet-name>
+    <servlet-class>com.tcs.shg.accounting.reqhandler.CeoLoanIntelligenceServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>CeoLoanIntelligenceServlet</servlet-name>
+    <url-pattern>/CeoLoanIntelligence</url-pattern>
+  </servlet-mapping>
+
+  <session-config>
+    <session-timeout>30</session-timeout>
+  </session-config>
+
+  <welcome-file-list>
+    <welcome-file>index.jsp</welcome-file>
+  </welcome-file-list>
+
+  <!-- database: the data source itself (URL, user, password) lives in JBoss deploy/sthreenidhi-ds.xml -->
+  <resource-ref>
+    <description>SNBSAP database</description>
+    <res-ref-name>SNBSAP_DS</res-ref-name>
+    <res-type>javax.sql.DataSource</res-type>
+    <res-auth>Container</res-auth>
+  </resource-ref>
+</web-app>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jboss-web>
+  <!-- also used when the WAR is deployed on its own; inside the EAR, application.xml decides -->
+  <context-root>/sthreenidhi</context-root>
+  <resource-ref>
+    <res-ref-name>SNBSAP_DS</res-ref-name>
+    <jndi-name>java:/SNBSAP_DS</jndi-name>
+  </resource-ref>
+</jboss-web>

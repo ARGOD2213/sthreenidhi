@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE jboss-app PUBLIC "-//JBoss//DTD J2EE Application 5.0//EN" "http://www.jboss.org/j2ee/dtd/jboss-app_5_0.dtd">
+<jboss-app>
+  <!-- own class loader so this EAR does not mix libraries with other applications on the server -->
+  <loader-repository>in.gov.ap.serp:archive=sthreenidhi.ear</loader-repository>
+</jboss-app>

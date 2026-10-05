@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copy this file to  <JBOSS_HOME>/server/<profile>/deploy/  next to the EAR.
+  Edit the three CHANGE_ME values. The password stays here, not in the application.
+
+  Needs the Microsoft SQL Server JDBC driver (sqljdbc4.jar, or jtds) in
+  <JBOSS_HOME>/server/<profile>/lib/ - the queries are T-SQL.
+
+  The application finds it as java:/SNBSAP_DS (JNDI name below).
+-->
+<datasources>
+  <local-tx-datasource>
+    <jndi-name>SNBSAP_DS</jndi-name>
+
+    <connection-url>jdbc:sqlserver://CHANGE_ME_HOST:1433;databaseName=SNBSAP</connection-url>
+    <driver-class>com.microsoft.sqlserver.jdbc.SQLServerDriver</driver-class>
+    <user-name>CHANGE_ME_USER</user-name>
+    <password>CHANGE_ME_PASSWORD</password>
+
+    <min-pool-size>2</min-pool-size>
+    <max-pool-size>10</max-pool-size>
+    <blocking-timeout-millis>30000</blocking-timeout-millis>
+    <idle-timeout-minutes>10</idle-timeout-minutes>
+
+    <!-- drop dead connections instead of handing them to the dashboard -->
+    <check-valid-connection-sql>SELECT 1</check-valid-connection-sql>
+  </local-tx-datasource>
+</datasources>
