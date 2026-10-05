@@ -103,7 +103,7 @@ public final class GzipSupport {
         public void setStatus(int sc, String msg) { status = sc; super.setStatus(sc, msg); }
         public void sendError(int sc) throws IOException { status = sc; super.sendError(sc); }
         public void sendError(int sc, String msg) throws IOException { status = sc; super.sendError(sc, msg); }
-        public void sendRedirect(String location) throws IOException { status = HttpServletResponse.SC_FOUND; super.sendRedirect(location); }
+        public void sendRedirect(String location) throws IOException { status = 302; super.sendRedirect(location); }
         public void setContentType(String type) { contentType = type; super.setContentType(type); }
 
         // what the handler wrote, for the response cache
