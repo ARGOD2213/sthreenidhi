@@ -19,7 +19,7 @@ Open link (context root `sthreenidhi`, replaces `AWFPREPORTS`):
     docs/                    EXTERNAL_SITE.md (signed links), ADD_A_DASHBOARD.md, PERFORMANCE.md, office notes
     office-reference/        old office pieces (QueryTool, FrontServlet handler) - not built
 
-## Open in Eclipse (no Maven, no server plug-in needed)
+## Open in Eclipse - see docs/ECLIPSE_SETUP.md (new Dynamic Web Project + Tomcat 5.5 test). Quick alternative:
 
 1. File -> Import -> General -> Existing Projects into Workspace -> pick this folder.
 2. Project -> Properties -> Java Build Path -> Libraries: the JRE entry must be your **JDK 6**
