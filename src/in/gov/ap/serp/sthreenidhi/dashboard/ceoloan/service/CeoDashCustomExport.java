@@ -201,7 +201,7 @@ public final class CeoDashCustomExport {
                 if (a != null) b.add(a);
                 b.addOverdue(m, odReady);
                 b.target += num(m.get("targetAmount")) * 10000000d * share;
-                b.hasTarget = b.hasTarget || share > 0;
+                b.hasTarget = b.hasTarget || (share > 0 && project == null);   // the target is not split by project
             }
         }
 
@@ -271,7 +271,7 @@ public final class CeoDashCustomExport {
         if (groupHasMandals && odReady) {
             res.info.add(new String[] { "Overdue", "Overdue columns are today's arrears of open loans (as on the data date below); they do not change with the months chosen" });
         }
-        if (share > 0 && groupHasMandals) {
+        if (share > 0 && groupHasMandals && project == null) {
             res.info.add(new String[] { "Target", "Financial-year target spread evenly over 12 months and counted for the months chosen that fall in FY " + snap.getFyLabel() });
         }
         res.info.add(new String[] { "Scope", "Stree Nidhi projects only (LOAN_TYPE = SN); payment modes: UPI = Phi PAYMENT SERVICE, POS = PAYTM PAYMENT SERVICE, Auto-debit = SHG AUTO DEBIT PROCESS, rest = manual" });
@@ -417,9 +417,12 @@ public final class CeoDashCustomExport {
                 Bucket x = (Bucket) a, y = (Bucket) b;
                 if (nameSort) return asc ? x.name.compareToIgnoreCase(y.name) : y.name.compareToIgnoreCase(x.name);
                 Object vx = x.value(key), vy = y.value(key);
-                double dx = vx instanceof Number ? ((Number) vx).doubleValue() : Double.NEGATIVE_INFINITY;
-                double dy = vy instanceof Number ? ((Number) vy).doubleValue() : Double.NEGATIVE_INFINITY;
-                int c = Double.compare(dx, dy);
+                boolean nx = !(vx instanceof Number), ny = !(vy instanceof Number);
+                if (nx || ny) {                       // rows with no value always go last
+                    if (nx && ny) return x.name.compareToIgnoreCase(y.name);
+                    return nx ? 1 : -1;
+                }
+                int c = Double.compare(((Number) vx).doubleValue(), ((Number) vy).doubleValue());
                 if (c == 0) return x.name.compareToIgnoreCase(y.name);
                 return asc ? c : -c;
             }
