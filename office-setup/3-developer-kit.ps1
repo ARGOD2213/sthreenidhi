@@ -204,7 +204,7 @@ $out = Join-Path $root 'MY-CHANGES-TO-SEND.txt'
 Write-Host ""
 Write-Host ("Done: {0} change(s), {1} KB. File: {2}" -f $total, [math]::Round($sb.Length / 1024), $out)
 Write-Host "Copy ALL the text of that file into the body of your email (do not attach, do not edit it)."
-try { Start-Process notepad.exe $out } catch { }
+try { Start-Process notepad.exe ('"' + $out + '"') } catch { }
 '@
 Save 'SEND-MY-CHANGES.ps1' $t
 
