@@ -1,0 +1,64 @@
+CEO LOAN DASHBOARD - STYLING JOB   (read this first, it takes 3 minutes)
+=======================================================================
+
+WHAT YOU DO
+  Change how the dashboard LOOKS: colours, spacing (padding / margin), font sizes, borders, shadows,
+  card and table looks. Page by page.
+
+WHAT YOU DO NOT DO
+  - Do not edit any .js, .jsp or .java file. Do not rename classes or ids. They are used by the program.
+  - Do not delete, rename or move any file or folder.
+  - Do not use "Format document", "Beautify", "Minify" or any auto-format on the css files.
+    (It rewrites every line, and then your changes cannot be sent.)
+  - Do not hide any number, label or button. The CEO must still see everything.
+
+WHAT YOU NEED
+  Only a browser (Chrome or Edge) and Notepad / VS Code / Notepad++. Nothing to install. No server, no database.
+
+STEP 1 - OPEN THE DASHBOARD
+  Unzip the folder. Open:   ui-mock\index.html     (right-click > Open with > Chrome)
+  You see the full dashboard with FAKE numbers. Click around: every page, every drill-down, every popup works.
+
+STEP 2 - FIND WHAT TO CHANGE
+  In Chrome press F12, click the small arrow icon (top-left of the F12 panel), then click the thing you want
+  to change on the page. The panel shows its class name, for example   cd-loan-kpi-chevron
+  Now search for that class name in the css files:
+      ui-src\css\1-foundation-and-first-pages.css       header, menu, buttons, base styles, first pages
+      ui-src\css\2-overview-and-loans.css               Overview page, Loans Given page
+      ui-src\css\3-loans-employees-calendar-popups.css  Loans, Repayment, Employees, Calendar, popups
+      ui-src\css\4-employees-explorer-excel.css         Employees, drill-down tables, Custom Excel
+  (In VS Code: Ctrl+Shift+F searches all files at once.)
+  The F12 panel also lets you try a change live (edit a value there) before you write it in the file.
+
+STEP 3 - CHANGE IT
+  Open the css file, change the value (for example  padding: 12px  ->  padding: 16px,  or a colour),
+  Save, go to the browser and press F5. You see the result at once.
+
+  If you need a completely NEW rule, add it at the bottom of   ui-src\theme\5-theme.css
+  (that file loads last, so it wins over older rules).
+
+RULES FOR THE CSS (the CEO's office uses an older browser, so keep it simple)
+  - Plain CSS only. No   var(--x)   variables, no   gap   on flex, no new CSS tricks.
+  - Check the page at 1366 px and 1920 px screen widths.
+  - Colours: use normal hex codes like #1a73e8.
+
+OTHER SITUATIONS TO CHECK (once per page, at the end)
+  Add this to the address in the browser:
+      ui-mock\index.html?scenario=slow          shows the loading look
+      ui-mock\index.html?scenario=empty         shows the "no data" look
+      ui-mock\index.html?scenario=servererror   shows the error look
+      ui-mock\index.html?scenario=notready      shows the "data is being prepared" screen
+      ui-mock\index.html?scenario=nooverdue     shows the page without the overdue columns
+  (If the page looks odd after you add this, remove it from the address and press F5.)
+
+WHEN YOU ARE FINISHED (or at the end of each day)
+  1. Double-click   ui-src\SEND-MY-CHANGES.bat
+  2. A black window appears, then Notepad opens a file called  MY-CHANGES-TO-SEND.txt
+  3. In Notepad press Ctrl+A, Ctrl+C. Paste ALL the text into the BODY of an email to the person who gave you
+     this project. Do not attach the file, do not edit the text, do not use the "formatted / rich text" mode
+     (use plain text if your email has the option).
+  4. If the black window says "You have not changed anything yet", you did not save your css files.
+
+THAT IS ALL. The text you send contains only the lines you changed, so it is short.
+
+Questions about what something does? Ask before changing it. Do not guess on anything that is not styling.
