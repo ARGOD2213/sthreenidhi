@@ -65,11 +65,7 @@ employees.forEach(function (e) { addOd(e, e, 'e' + e.userId); });
 ['statusLoans','overdueLoans','overdueAmount','outstanding','overdueOutstanding','od1Loans','od1Amount','od2Loans','od2Amount','od3Loans','od3Amount'].forEach(function (k) { totals[k] = districts.reduce(function (s, d) { return s + d[k]; }, 0); });
 totals.overdueReady = 1;
 
-// MOCK_OD=none  -> like a snapshot saved by the previous release (no overdue keys at all)
-// MOCK_OD=zero  -> like a build where the overdue query failed (overdueReady 0, zero fields)
 var ODK = ['statusLoans','overdueLoans','overdueAmount','outstanding','overdueOutstanding','od1Loans','od1Amount','od2Loans','od2Amount','od3Loans','od3Amount'];
-if (process.env.MOCK_OD === 'none') { [districts, mandals, employees, [totals]].forEach(function (l) { l.forEach(function (o) { ODK.forEach(function (k) { delete o[k]; }); delete o.overdueReady; }); }); }
-if (process.env.MOCK_OD === 'zero') { [districts, mandals, employees, [totals]].forEach(function (l) { l.forEach(function (o) { ODK.forEach(function (k) { o[k] = 0; }); }); }); totals.overdueReady = 0; }
 var boot = { ready: true, fyLabel: '2026-27', fyStart: '2026-04-01', fyEnd: '2027-04-01', builtAtMillis: Date.now() - 3600000, fyList: ['2026-27', '2025-26'], targetUnit: 'unconfirmed (likely crore)', totals: totals, districts: districts, months: months, monthly: monthly, daily: daily, projects: projects, purposes: purposes, mandals: mandals, employees: employees };
 
 // ---- drill: fake rows for any level ----
@@ -99,7 +95,68 @@ function drill(q) {
   return { source: 'mock', payModes: true, rows: rows };
 }
 
-function send(res, code, type, body) { res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' }); res.end(body); }
+// ------------------------------------------------------------------------------------------------
+// server part: serves the page shell like the JSP does, the assets (from the part files, so no build step is needed while
+// styling), and fake answers for every URL the dashboard calls. Scenarios (cookie, set with ?scenario=...) change the data.
+var PORT = +process.env.PORT || 8088;
+var UI_SRC = path.join(__dirname, '..', '..', 'ui-src');
+var FROM_PARTS = process.env.MOCK_ASSETS !== 'built' && fs.existsSync(path.join(UI_SRC, 'js'));
+var SCENARIOS = {
+  normal:         'Everything present (default)',
+  nooverdue:      'Data from the previous release: no overdue fields at all',
+  overduefailed:  'The overdue query failed: overdueReady = 0, all overdue values 0',
+  empty:          'No districts in the data ("No data available" screen)',
+  notready:       'The server is still building the data ("being prepared" screen)',
+  slow:           'Normal data, but every answer takes 1.5 seconds (loading states)',
+  servererror:    'Normal page, but every drill / member / SHG call fails with 500 (error states)'
+};
+
+function partFiles(dirs, ext) {
+  var out = [];
+  dirs.forEach(function (d) {
+    var dir = path.join(UI_SRC, d);
+    if (!fs.existsSync(dir)) { return; }
+    fs.readdirSync(dir).filter(function (f) { return f.slice(-ext.length) === ext; }).sort().forEach(function (f) { out.push(path.join(dir, f)); });
+  });
+  return out;
+}
+function assetBytes(name) {
+  if (FROM_PARTS) {
+    var files = name === 'app.css' ? partFiles(['css', 'theme'], '.css') : partFiles(['js'], '.js');
+    return Buffer.concat(files.map(function (f) { return fs.readFileSync(f); }));
+  }
+  return fs.readFileSync(path.join(DIR, name));
+}
+function uiVersion() {            // changes whenever a part file is saved: the page reloads itself
+  var t = 0;
+  partFiles(['js', 'css', 'theme'], '.js').concat(partFiles(['css', 'theme'], '.css')).forEach(function (f) { t = Math.max(t, fs.statSync(f).mtime.getTime()); });
+  return String(t);
+}
+
+function cookieOf(req, name) {
+  var m = (req.headers.cookie || '').match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : '';
+}
+function bootFor(scenario) {
+  var b = JSON.parse(JSON.stringify(boot));
+  if (scenario === 'nooverdue') {
+    [b.districts, b.mandals, b.employees, [b.totals]].forEach(function (l) { l.forEach(function (o) { ODK.forEach(function (k) { delete o[k]; }); delete o.overdueReady; }); });
+  } else if (scenario === 'overduefailed') {
+    [b.districts, b.mandals, b.employees, [b.totals]].forEach(function (l) { l.forEach(function (o) { ODK.forEach(function (k) { o[k] = 0; }); }); });
+    b.totals.overdueReady = 0;
+  } else if (scenario === 'empty') {
+    b.districts = []; b.mandals = []; b.employees = []; b.monthly = []; b.daily = {}; b.projects = []; b.purposes = [];
+  } else if (scenario === 'notready') {
+    return { ready: false };
+  }
+  return b;
+}
+
+function send(res, code, type, body, extra) {
+  var h = { 'Content-Type': type, 'Cache-Control': 'no-store' };
+  for (var k in (extra || {})) { h[k] = extra[k]; }
+  res.writeHead(code, h); res.end(body);
+}
 function json(res, o) { send(res, 200, 'application/json;charset=UTF-8', JSON.stringify(o)); }
 
 http.createServer(function (req, res) {
@@ -112,33 +169,69 @@ http.createServer(function (req, res) {
   }
   var u0 = url.parse(req.url, true);
   handle(req, res, u0.pathname, u0.query);
-}).listen(8088, function () { console.log('Mock dashboard: http://localhost:8088/sthreenidhi/CeoLoanIntelligence?action=page'); });
+}).listen(PORT, function () {
+  console.log('');
+  console.log('  Mock dashboard (fake data, no database):  http://localhost:' + PORT + '/sthreenidhi/CeoLoanIntelligence?action=page');
+  console.log('  Scenarios and shortcuts:                  http://localhost:' + PORT + '/sthreenidhi/mock');
+  console.log('  Styles and scripts are read from ' + (FROM_PARTS ? 'ui-src/ (save a file and the page reloads)' : 'the built app.js / app.css'));
+  console.log('');
+});
 
 function handle(req, res, p, q) {
-  if (p === '/' || p === '/sthreenidhi' || p === '/sthreenidhi/') { res.writeHead(302, { Location: '/sthreenidhi/CeoLoanIntelligence?action=page' }); return res.end(); }
+  if (p === '/' || p === '/sthreenidhi' || p === '/sthreenidhi/') { res.writeHead(302, { Location: '/sthreenidhi/mock' }); return res.end(); }
   if (p.indexOf('/Assets/') === 0) { return send(res, 404, 'text/plain', 'n/a'); }
-  if (p !== '/sthreenidhi/CeoLoanIntelligence') { return send(res, 404, 'text/plain', 'not found'); }
-  var a = q.action || 'page';
-  if (a === 'asset') { var f = q.name === 'app.css' ? 'app.css' : 'app.js'; return send(res, 200, f === 'app.css' ? 'text/css;charset=UTF-8' : 'application/javascript;charset=UTF-8', fs.readFileSync(path.join(DIR, f))); }
-  if (a === 'status') { return send(res, 200, 'text/plain', 'ready=true\nloading=false\n'); }
-  if (a === 'drill') { return json(res, drill(q)); }
-  if (a === 'trend') { return json(res, { payModes: true, months: months.map(function (mo, i) { var r = rnd(hash(mo + (q.districtId || ''))); var l = Math.round(2500 * (0.7 + r() * 0.6)); return { month: mo, loanCount: l, disbursed: l * 50000, repayTxns: l * 3, repaid: l * 41000, posAmount: l * 3000, upiAmount: l * 9000, autoAmount: l * 7000 }; }) }); }
-  if (a === 'keyedBy') { var rr = []; for (var i = 0; i < 25; i++) { rr.push({ login: 'user' + (100 + i), txns: 40 + i * 7, amount: 120000 + i * 31000, first: '2026-04-0' + (1 + i % 9), last: '2026-10-0' + (1 + i % 5) }); } return json(res, { rows: rr }); }
-  if (a === 'shg') { return json(res, { shg: { id: q.shgId, name: 'Sri Lakshmi SHG', voName: 'Rampuram Mahila Samakhya', registered: '2014-06-12', members: 10, category: 'BC', village: 'Rampuram', wellbeing: 'Poor', grade: 'A', bank: 'SBI', branch: 'Rampuram', disabled: 'No', minority: 'No', mobileLast4: '1234' } }); }
-  if (a === 'member') { var lo = []; for (var k = 0; k < 3; k++) { lo.push({ id: 'LN' + k, shgLoanAccNo: 'SL' + k, projectType: 'SN1', projectName: 'Stree Nidhi Regular', purpose: PURPOSES[k], amount: 50000 + k * 10000, status: k ? 'CLOSED' : 'OPEN', arrears: k ? undefined : 6200, emi: k ? undefined : 2400, balance: k ? undefined : 31000, dueDate: '2026-10-01', issuedDate: '2026-0' + (4 + k) + '-12', repaid: 20000 + k * 10000, repayTxns: 4, lastRepaymentDate: '2026-09-28', repayments: [{ id: 'C1', date: '2026-09-28', amount: 5000, status: 'PAID', processed: 'Y', adjustType: '', creditedDate: '2026-09-29', mode: 'UPI' }] }); } return json(res, { member: { id: q.memberId, name: 'Lakshmi Devi', shgId: 'x', surname: 'K', fatherHusband: 'Ramesh K', birthYear: 1988, marital: 'Married', category: 'BC', education: 'SSC', wellbeing: 'Poor', village: 'Rampuram', registered: '2014-06-12', disabled: 'No', mobileLast4: '4321' }, loans: lo }); }
-  if (a === 'getBorrowers') { return json(res, []); }
-  if (a === 'custom' || a === 'customPreview') {
-    // the real server builds these from the snapshot; here a stand-in so the panel can be tried
-    var cols = (q.cols || 'loans').split(',');
-    if (a === 'custom') { return send(res, 200, 'text/plain', 'mock Excel: ' + JSON.stringify(q)); }
-    var head = ['#', 'District'].concat(cols), rows = [];
-    for (var i = 0; i < 8; i++) { rows.push([i + 1, DISTRICTS[i].name].concat(cols.map(function (c, k) { return /Pct/.test(c) ? 41.5 + i : 1234567 * (i + 1) + k; }))); }
-    return json(res, { status: 'ok', count: 28, head: head, rows: rows, total: [null, 'Total'].concat(cols.map(function () { return 98765432; })), notes: [] });
+
+  if (p === '/sthreenidhi/mock') {
+    var cur = cookieOf(req, 'mockScenario') || 'normal';
+    var rows = Object.keys(SCENARIOS).map(function (k) {
+      return '<li><a href="/sthreenidhi/CeoLoanIntelligence?action=page&scenario=' + k + '">' + k + '</a>' + (k === cur ? ' &nbsp;<b>(current)</b>' : '') + ' &mdash; ' + SCENARIOS[k] + '</li>';
+    }).join('');
+    return send(res, 200, 'text/html;charset=UTF-8', '<!DOCTYPE html><meta charset="utf-8"><title>Mock scenarios</title><body style="font:15px/1.6 Segoe UI,Arial;max-width:760px;margin:30px auto;padding:0 16px">' +
+      '<h2>Mock dashboard - scenarios</h2><p>All data here is fake and made up. Pick a scenario; it stays selected until you pick another.</p><ul>' + rows + '</ul>' +
+      '<p>Open directly: <a href="/sthreenidhi/CeoLoanIntelligence?action=page#/loan-journey">Loans Given</a> &middot; <a href="/sthreenidhi/CeoLoanIntelligence?action=page#/repayment-journey">Repayments</a> &middot; ' +
+      '<a href="/sthreenidhi/CeoLoanIntelligence?action=page#/performance-map">Employees</a> &middot; <a href="/sthreenidhi/CeoLoanIntelligence?action=page#/calendar">Calendar</a></p></body>');
   }
-  if (a === 'export') { return send(res, 200, 'text/plain', 'mock: excel export is not available in the preview'); }
-  // page
-  var js = JSON.stringify(boot).replace(/</g, '\\u003c');
-  send(res, 200, 'text/html;charset=UTF-8', '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>CEO Loan &amp; Repayment Intelligence</title>' +
-    '<link href="/sthreenidhi/CeoLoanIntelligence?action=asset&name=app.css&v=mock" rel="stylesheet"><script>window.__CEO_LIVE=true;window.__CEO_CTX="/sthreenidhi";window.__CEO_INITIAL_CHAPTER="pulse";window.__CEO_SNAPSHOT_MESSAGE="";window.__CEO_RAND_ID="";window.__CEO_TOKEN="";window.__CEO_BOOT_DATA=' + js + ';</script></head>' +
-    '<body><div id="cd-app-root"></div><script src="/sthreenidhi/CeoLoanIntelligence?action=asset&name=app.js&v=mock"></script></body></html>');
+  if (p === '/sthreenidhi/__ui_version') { return send(res, 200, 'text/plain', uiVersion()); }
+  if (p !== '/sthreenidhi/CeoLoanIntelligence') { return send(res, 404, 'text/plain', 'not found'); }
+
+  var a = q.action || 'page';
+  var scenario = q.scenario && SCENARIOS[q.scenario] ? q.scenario : (cookieOf(req, 'mockScenario') || 'normal');
+  if (a === 'asset') {
+    var f = q.name === 'app.css' ? 'app.css' : 'app.js';
+    return send(res, 200, f === 'app.css' ? 'text/css;charset=UTF-8' : 'application/javascript;charset=UTF-8', assetBytes(f));
+  }
+  if (a === 'status') { return send(res, 200, 'text/plain', 'ready=' + (scenario !== 'notready') + '\nloading=false\n'); }
+
+  function answer() {
+    if (scenario === 'servererror' && /^(drill|member|shg|trend|keyedBy)$/.test(a)) {
+      return send(res, 500, 'application/json;charset=UTF-8', JSON.stringify({ status: 'error', message: 'Unable to load this level (mock error).' }));
+    }
+    if (a === 'drill') { return json(res, drill(q)); }
+    if (a === 'trend') { return json(res, { payModes: true, months: months.map(function (mo, i) { var r = rnd(hash(mo + (q.districtId || ''))); var l = Math.round(2500 * (0.7 + r() * 0.6)); return { month: mo, loanCount: l, disbursed: l * 50000, repayTxns: l * 3, repaid: l * 41000, posAmount: l * 3000, upiAmount: l * 9000, autoAmount: l * 7000 }; }) }); }
+    if (a === 'keyedBy') { var rr = []; for (var i = 0; i < 25; i++) { rr.push({ login: 'user' + (100 + i), txns: 40 + i * 7, amount: 120000 + i * 31000, first: '2026-04-0' + (1 + i % 9), last: '2026-10-0' + (1 + i % 5) }); } return json(res, { rows: rr }); }
+    if (a === 'shg') { return json(res, { shg: { id: q.shgId, name: 'Sri Lakshmi SHG', voName: 'Rampuram Mahila Samakhya', registered: '2014-06-12', members: 10, category: 'BC', village: 'Rampuram', wellbeing: 'Poor', grade: 'A', bank: 'SBI', branch: 'Rampuram', disabled: 'No', minority: 'No', mobileLast4: '1234' } }); }
+    if (a === 'member') { var lo = []; for (var k = 0; k < 3; k++) { lo.push({ id: 'LN' + k, shgLoanAccNo: 'SL' + k, projectType: 'SN1', projectName: 'Stree Nidhi Regular', purpose: PURPOSES[k], amount: 50000 + k * 10000, status: k ? 'CLOSED' : 'OPEN', arrears: k ? undefined : 6200, emi: k ? undefined : 2400, balance: k ? undefined : 31000, dueDate: '2026-10-01', issuedDate: '2026-0' + (4 + k) + '-12', repaid: 20000 + k * 10000, repayTxns: 4, lastRepaymentDate: '2026-09-28', repayments: [{ id: 'C1', date: '2026-09-28', amount: 5000, status: 'PAID', processed: 'Y', adjustType: '', creditedDate: '2026-09-29', mode: 'UPI' }] }); } return json(res, { member: { id: q.memberId, name: 'Lakshmi Devi', shgId: 'x', surname: 'K', fatherHusband: 'Ramesh K', birthYear: 1988, marital: 'Married', category: 'BC', education: 'SSC', wellbeing: 'Poor', village: 'Rampuram', registered: '2014-06-12', disabled: 'No', mobileLast4: '4321' }, loans: lo }); }
+    if (a === 'getBorrowers') { return json(res, []); }
+    if (a === 'custom' || a === 'customPreview') {
+      // the real server builds these from the snapshot; here a stand-in so the panel can be tried
+      var cols = (q.cols || 'loans').split(',');
+      if (a === 'custom') { return send(res, 200, 'text/plain', 'mock Excel: ' + JSON.stringify(q)); }
+      var head = ['#', 'District'].concat(cols), rows2 = [];
+      for (var i2 = 0; i2 < 8; i2++) { rows2.push([i2 + 1, DISTRICTS[i2].name].concat(cols.map(function (c, k2) { return /Pct/.test(c) ? 41.5 + i2 : 1234567 * (i2 + 1) + k2; }))); }
+      return json(res, { status: 'ok', count: 28, head: head, rows: rows2, total: [null, 'Total'].concat(cols.map(function () { return 98765432; })), notes: [] });
+    }
+    if (a === 'export') { return send(res, 200, 'text/plain', 'mock: Excel export is not available in the preview'); }
+
+    // the page itself: the same variables the JSP writes
+    var js = JSON.stringify(bootFor(scenario)).replace(/</g, '\\u003c');
+    var reload = FROM_PARTS ? '<script>(function(){var v=null;setInterval(function(){var x=new XMLHttpRequest();x.open("GET","/sthreenidhi/__ui_version",true);x.onload=function(){if(v!==null&&v!==x.responseText){location.reload();}v=x.responseText;};x.send();},1000);})();</script>' : '';
+    var extra = q.scenario && SCENARIOS[q.scenario] ? { 'Set-Cookie': 'mockScenario=' + q.scenario + '; Path=/' } : {};
+    send(res, 200, 'text/html;charset=UTF-8', '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><title>CEO Loan &amp; Repayment Intelligence (MOCK)</title>' +
+      '<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,450;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700;800&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" media="print" onload="this.media=\'all\'">' +
+      '<link href="/sthreenidhi/CeoLoanIntelligence?action=asset&name=app.css&v=' + Date.now() + '" rel="stylesheet">' +
+      '<script>window.__CEO_LIVE=true;window.__CEO_CTX="/sthreenidhi";window.__CEO_INITIAL_CHAPTER="pulse";window.__CEO_SNAPSHOT_MESSAGE="' + (scenario === 'notready' ? 'The data is being prepared (mock).' : '') + '";window.__CEO_RAND_ID="";window.__CEO_TOKEN="";window.__CEO_BOOT_DATA=' + js + ';</script></head>' +
+      '<body><div id="cd-app-root"></div><script src="/sthreenidhi/CeoLoanIntelligence?action=asset&name=app.js&v=' + Date.now() + '"></script>' + reload + '</body></html>', extra);
+  }
+  if (scenario === 'slow' && a !== 'page') { return setTimeout(answer, 1500); }
+  answer();
 }

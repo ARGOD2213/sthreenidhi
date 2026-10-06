@@ -129,7 +129,7 @@
 
 <%!
     /* Change on every release that touches app.js or app.css, so browsers fetch the new files. */
-    private static final String ASSET_VERSION = "20261008a";
+    private static final String ASSET_VERSION = "8ddea24cf2";
 
     /* ---- JSP-scope helpers (safe to use anywhere below) ---- */
 

@@ -1,0 +1,137 @@
+@media (max-width: 760px) {
+  .top-header { padding: 8px 12px !important; }
+  .brand-title { font-size: 13px !important; line-height: 1.2 !important; }
+  .brand-subtitle { display: none !important; }
+  .search-container { display: none !important; }
+
+  .cd-chapter--lg { padding-left: 12px !important; padding-right: 12px !important; }
+  .cd-cv { padding: 12px 12px 6px; }
+  .cd-cv-card { padding: 14px; border-radius: 12px; }
+  .cd-cv-daytitle { font-size: 19px; }
+  .cd-cv-kpis > .cd-cv-kpi { -ms-flex: 1 1 45%; flex: 1 1 45%; margin: 0 8px 8px 0; padding: 10px 12px; }
+  .cd-cv-kpis > .cd-cv-kpi:nth-child(2n) { margin-right: 0; }
+  .cd-cv-kpi-val { font-size: 19px; }
+  .cd-cv-kpi-icon { display: none; }
+  .cd-cv-donut { display: none; }
+
+  /* Repayments */
+  .cd-rp-kpis { display: -ms-flexbox !important; display: flex !important; -ms-flex-wrap: wrap !important; flex-wrap: wrap !important; }
+  .cd-rp-kpis > .cd-rp-kpi { -ms-flex: 1 1 45% !important; flex: 1 1 45% !important; min-width: 0 !important; margin: 0 8px 8px 0 !important; }
+  .cd-rp-kpis > .cd-rp-kpi:nth-child(2n) { margin-right: 0 !important; }
+  .cd-rp-kpi-icon { display: none !important; }
+  .cd-rp-kpi-val { font-size: 17px !important; white-space: nowrap; }
+  .cd-rp-kpi-label, .cd-rp-kpi-sub { white-space: normal; word-break: normal; }
+  .cd-rp-rank-who { -ms-flex: 1 1 auto; flex: 1 1 auto; }
+  .cd-rp-rank-row .cd-cv-top-bar { display: none; }
+  .cd-rp-band { display: none; }
+
+  /* Loans Given */
+  .cd-lg-kpis { display: -ms-flexbox !important; display: flex !important; -ms-flex-wrap: wrap !important; flex-wrap: wrap !important; }
+  .cd-lg-kpis > * { -ms-flex: 1 1 45% !important; flex: 1 1 45% !important; min-width: 0 !important; }
+  .cd-loan-status-grid { display: -ms-flexbox !important; display: flex !important; }
+  .cd-loan-status-grid > * { -ms-flex: 1 1 0 !important; flex: 1 1 0 !important; min-width: 0 !important; margin: 0 4px !important; padding: 12px !important; }
+  .cd-project-grid, .cd-activity-grid, .cd-social-grid { display: -ms-flexbox !important; display: flex !important; -ms-flex-wrap: wrap !important; flex-wrap: wrap !important; }
+  .cd-project-grid > *, .cd-activity-grid > *, .cd-social-grid > * { -ms-flex: 1 1 45% !important; flex: 1 1 45% !important; min-width: 0 !important; max-width: 50% !important;
+    margin: 0 0 10px !important; box-sizing: border-box !important; }
+  .cd-project-card, .cd-activity-card { padding: 10px 12px !important; min-height: 0 !important; }
+  .cd-project-card { margin-right: 8px !important; }
+  .cd-project-arrow { display: none !important; }
+  .cd-project-amount, .cd-activity-amount { font-size: 17px !important; }
+  .cd-project-title, .cd-activity-title { font-size: 12.5px !important; }
+  .cd-activity-card { margin-right: 8px !important; }
+}
+.cd-chapter--repayment-journey.cd-chapter--lg { padding-left: 20px; padding-right: 20px; box-sizing: border-box; }
+@media (max-width: 760px) {
+  .cd-chapter--repayment-journey.cd-chapter--lg { padding-left: 12px; padding-right: 12px; }
+  .cd-lg-topshg .cd-ex-table, .cd-chapter--repayment-journey .cd-ex-table { min-width: 640px; }
+  .cd-lg-topshg .cd-ex-name { white-space: nowrap; }
+}
+.cd-lg-levelcard { margin: 0 0 18px; }
+@media (max-width: 760px) {
+  .cd-chapter--performance-map .cd-loan-page-subdesc { display: none; }
+  .cd-em-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .cd-em-card { padding: 10px 12px !important; }
+  .cd-em-card .cd-em-mini, .cd-em-card .cd-em-target, .cd-em-card .cd-em-open { display: none !important; }
+  .cd-em-card .cd-em-avatar { display: none !important; }
+  .cd-em-card .cd-em-stats > div { -ms-flex: 1 1 100% !important; flex: 1 1 100% !important; }
+  .cd-em-score-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .cd-em-prof-head .cd-em-avatar--lg { width: 44px !important; height: 44px !important; font-size: 15px !important; }
+}
+.cd-chapter--performance-map.cd-chapter--lg { padding-left: 20px; padding-right: 20px; box-sizing: border-box; }
+@media (max-width: 760px) { .cd-chapter--performance-map.cd-chapter--lg { padding-left: 12px; padding-right: 12px; } }
+
+/* ===================================================================================
+   v2 polish (appended last so it wins): one page frame for every chapter, a map that
+   fills the screen height, rounded cards instead of arrow shapes, aligned tables.
+   =================================================================================== */
+body, .cd-app-content { background: #eef2f6; }
+.cd-app-content { min-height: calc(100vh - 110px); }
+
+/* same side margins and top space on every chapter */
+.cd-chapter,
+.cd-chapter.cd-chapter--lg,
+.cd-chapter--loan-journey,
+.cd-chapter--repayment-journey,
+.cd-chapter--performance-map.cd-chapter--lg {
+  padding: 20px 28px 48px;
+  background: transparent;
+  box-sizing: border-box;
+}
+.cd-chapter--calendar { padding: 20px 8px 48px; }
+@media (max-width: 760px) {
+  .cd-chapter, .cd-chapter.cd-chapter--lg, .cd-chapter--performance-map.cd-chapter--lg { padding: 14px 12px 40px; }
+}
+
+/* Overview: map card stays in view and fills the screen height - no empty space below it */
+.main-wrapper { padding: 20px 28px 48px; background: transparent; gap: 24px; }
+.main-wrapper .left-panel { top: 14px; }
+.map-card { display: flex; flex-direction: column; }
+.map-image-container { height: calc(100vh - 330px); min-height: 440px; max-height: 760px; }
+.map-image-container > svg { width: 100%; height: 100%; max-height: 100%; }
+.map-footer { flex-wrap: wrap; gap: 10px 16px; }
+.showing-badge { white-space: nowrap; }
+.legend-container { flex-wrap: wrap; gap: 8px 16px; }
+.legend-container > div { white-space: nowrap; }
+
+/* social-status cards: rounded card with the badge inside, no arrow shape */
+.cd-social-chevron-wrapper { clip-path: none; border-radius: 16px; padding: 2px; filter: none; box-shadow: 0 2px 8px rgba(15, 23, 42, .07); }
+.cd-social-chevron-wrapper:hover { transform: translateY(-2px); filter: none; box-shadow: 0 6px 16px rgba(15, 23, 42, .12); }
+.cd-social-chevron-inner { clip-path: none; border-radius: 14px; padding: 14px 16px 12px 62px; }
+.cd-social-badge-circle { left: 14px; width: 38px; height: 38px; font-size: 12px; letter-spacing: -.02em; }
+.cd-project-arrow { display: none; }
+
+/* tables: headings sit over their numbers */
+.cd-ex-table th:not(:first-child) { text-align: right; }
+.cd-ex-table th, .cd-ex-table td { padding: 10px 14px; }
+
+/* employee cards: the line under the name may wrap instead of being cut */
+.cd-em-card .cd-em-sub { white-space: normal; }
+.cd-ex-table-wrap { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; }
+.cd-ex-table td { background: #ffffff; border-bottom: 1px solid #f1f5f9; }
+.cd-ex-table tr:last-child td { border-bottom: 0; }
+
+/* Overview: loans at risk (overdue) */
+.cd-risk-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1500px) { .cd-risk-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cd-risk-kpi { background: #ffffff; border: 1px solid #e2e8f0; border-top: 4px solid #cbd5e1; border-radius: 12px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(15, 23, 42, .04); min-width: 0; }
+.cd-risk-kpi--red { border-top-color: #dc2626; } .cd-risk-kpi--amber { border-top-color: #f59e0b; }
+.cd-risk-kpi--violet { border-top-color: #7c3aed; } .cd-risk-kpi--blue { border-top-color: #2563eb; }
+.cd-risk-k { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+.cd-risk-kpi b { display: block; font-size: 21px; font-weight: 800; margin: 4px 0 2px; color: #0f172a; font-variant-numeric: tabular-nums; }
+.cd-risk-kpi--red b { color: #b91c1c; } .cd-risk-kpi--amber b { color: #b45309; } .cd-risk-kpi--violet b { color: #6d28d9; } .cd-risk-kpi--blue b { color: #1d4ed8; }
+.cd-risk-kpi i { display: block; font-style: normal; font-size: 11.5px; color: #64748b; }
+.cd-risk-bandcard { margin-top: 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(15, 23, 42, .04); }
+.cd-risk-bandtitle { font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 10px; }
+.cd-risk-bar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: #f1f5f9; }
+.cd-risk-seg { display: block; height: 100%; }
+.cd-risk-legend { margin-top: 12px; display: grid; gap: 8px; }
+.cd-risk-leg { display: flex; align-items: center; font-size: 12.5px; color: #334155; }
+.cd-risk-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex: 0 0 10px; }
+.cd-risk-leg-name { flex: 1 1 auto; font-weight: 600; }
+.cd-risk-leg-val { flex: 0 0 auto; color: #475569; font-variant-numeric: tabular-nums; }
+.cd-risk-none { margin-top: 4px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 12px; padding: 14px 16px; font-weight: 600; }
+.cd-lg-kpis--7 { grid-template-columns: repeat(7, 1fr); }
+@media (max-width: 1240px) { .cd-lg-kpis--7 { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 900px) { .cd-lg-kpis--7 { grid-template-columns: repeat(2, 1fr); } }
+
+/* ===== Custom Excel: floating button + side panel ===== */

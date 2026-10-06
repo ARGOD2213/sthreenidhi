@@ -1,0 +1,47 @@
+.cd-loan-composition {
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-wrap: wrap;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+  max-width: 700px;
+}
+
+.cd-loan-composition>* {
+  -ms-flex: 1 1 200px;
+  flex: 1 1 200px;
+  min-width: 200px;
+  max-width: 216px;
+  margin: 0 12px 12px 0;
+}
+
+.cd-loan-type-card {
+  border: 1px solid;
+  padding: 16px 18px;
+  cursor: pointer;
+}
+
+.cd-loan-type-card__name {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.cd-loan-type-card__amt {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.cd-loan-type-card__meta {
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-pack: justify;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11.5px;
+}
+
+.cd-loan-type-card__growth {
+  font-weight: 600;
+}
+

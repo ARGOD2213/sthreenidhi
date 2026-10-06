@@ -1,0 +1,264 @@
+.cd-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(20, 40, 60, 0.09);
+}
+
+.cd-cal-header__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cd-cal-icon {
+  font-size: 22px;
+}
+
+.cd-cal-date-pick {
+  display: flex;
+  flex-direction: column;
+}
+
+.cd-cal-date {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.15;
+  font-family: 'Fraunces', Georgia, serif;
+}
+
+.cd-cal-date-input {
+  border: none;
+  background: transparent;
+  font-size: 11.5px;
+  color: inherit;
+  opacity: 0.55;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.cd-cal-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cd-cal-strip__days {
+  display: flex;
+  gap: 4px;
+}
+
+.cd-cal-nav-btn {
+  border: 1px solid rgba(20, 40, 60, 0.14);
+  background: #fff;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  font-size: 15px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.cd-cal-nav-btn:hover {
+  background: #F6F9FC;
+}
+
+.cd-cal-day {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border-radius: 12px;
+  min-width: 48px;
+}
+
+.cd-cal-day:hover {
+  background: #F6F9FC;
+}
+
+.cd-cal-day__label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
+}
+
+.cd-cal-day__num {
+  font-size: 15px;
+  font-weight: 600;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cd-cal-day--today .cd-cal-day__num {
+  border: 1.5px solid #FF9800;
+  color: #FF9800;
+}
+
+.cd-cal-day--selected .cd-cal-day__num {
+  background: #FF9800;
+  color: #17251D;
+  border: none;
+}
+
+.cd-cal-day__dots {
+  display: flex;
+  gap: 3px;
+  height: 6px;
+}
+
+.cd-cal-day__dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.cd-cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+}
+
+.cd-cal-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cd-cal-legend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.cd-cal-day-list>*+* {
+  margin-top: 10px;
+}
+
+.cd-cal-event {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.cd-cal-event__accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.cd-cal-event__type {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.cd-cal-event__title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.cd-cal-event__sub {
+  font-size: 12.5px;
+}
+
+.cd-cal-empty {
+  text-align: center;
+  padding: 56px 24px;
+}
+
+.cd-cal-empty__icon {
+  font-size: 34px;
+  margin-bottom: 10px;
+}
+
+.cd-cal-empty__title {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+  letter-spacing: 0.03em;
+}
+
+.cd-cal-attn-list>*+* {
+  margin-top: 10px;
+}
+
+.cd-cal-attn-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 4px;
+  border-radius: 10px;
+  cursor: default;
+  text-align: left;
+  background: none;
+  border: none;
+  width: 100%;
+}
+
+.cd-cal-attn-item[role="button"] {
+  cursor: pointer;
+}
+
+.cd-cal-attn-item[role="button"]:hover {
+  background: #F6F9FC;
+}
+
+.cd-cal-attn-item__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.cd-cal-attn-item__title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.cd-cal-attn-item__detail {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.cd-loan-drill-row--empty {
+  opacity: 0.6;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.cd-loan-drill-row--empty:hover {
+  border-color: rgba(20, 50, 35, 0.12);
+  background: rgba(148, 163, 184, 0.14);
+}
+

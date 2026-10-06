@@ -1,0 +1,9 @@
+/* =====================================================================================
+   THEME OVERRIDES - Loans Given page
+   Put NEW styles for this page here. This folder is joined AFTER every older rule, so a rule here wins over the
+   old ones without touching them. Rules:
+   - Start every selector with the page root so nothing leaks to other pages:  .cd-chapter--loan-journey
+   - Change colours / spacing / fonts here; do not rename classes and do not edit the .js parts for looks only.
+   - KPI tiles .cd-loan-kpi-chevron, ranked list .cd-cv-top-row, status .cd-lg-status, cards .cd-project-card / .cd-activity-card / .cd-social-chevron-wrapper.
+   After saving, the preview page reloads by itself. Before handing over, run the build script (see the UI developer guide).
+   ===================================================================================== */

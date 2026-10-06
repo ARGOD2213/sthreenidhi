@@ -1,0 +1,9 @@
+/* =====================================================================================
+   THEME OVERRIDES - everything (header, menu, buttons, cards)
+   Put NEW styles for this page here. This folder is joined AFTER every older rule, so a rule here wins over the
+   old ones without touching them. Rules:
+   - Start every selector with the page root so nothing leaks to other pages:  body .top-header, .cd-chapter-nav, .cd-surface ...
+   - Change colours / spacing / fonts here; do not rename classes and do not edit the .js parts for looks only.
+   - Colours used on every page go here. Page-only colours go in the page file.
+   After saving, the preview page reloads by itself. Before handing over, run the build script (see the UI developer guide).
+   ===================================================================================== */
