@@ -40,7 +40,7 @@ database yet** - the first live start is the real test (steps below).
 | `WebContent/dashboards/ceo-loan-intelligence/app.css` | styles |
 
 (`src/...` = `src/in/gov/ap/serp/sthreenidhi`.) No new jar, no `web.xml` or `jboss-web.xml` change.
-Then clean + build the EAR exactly as before.
+Then clean + build the EAR exactly as before (or run `tools\build-ear.ps1`, which does the same steps and first checks that no mock text is inside what is deployed).
 
 ## After the deploy: what to check
 

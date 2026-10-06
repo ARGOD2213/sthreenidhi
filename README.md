@@ -20,7 +20,10 @@ Open link (context root `sthreenidhi`, replaces `AWFPREPORTS`):
                              RELEASE_2_DEPLOY.md (overdue + custom Excel: files to copy, what to check),
                              RECHECK_QUERIES*.sql (read-only checks for the office query tool),
                              REMOVE_CEO_FROM_AWFPREPORTS.txt, DB_TEAM_QUESTIONS.txt
-    devtools/mock/           local PREVIEW with fake data (node server.js). Never part of the EAR; never copy to the office.
+    ui-src/                  the look and the scripts in small numbered parts (+ theme/ for new styles); build.js joins them into app.js / app.css
+    devtools/mock/           local PREVIEW with fake data (start-mock.bat). Never part of the EAR; never copy to the office.
+    tools/                   check-release.js (no mock text, assets up to date) and build-ear.ps1 (the EAR build with those checks)
+    docs/UI_DEVELOPER_GUIDE.md, UI_COLOR_INVENTORY.md, BACKEND_CONTRACT.md   for UI developers and for a possible .NET back end
     office-reference/        old office pieces (QueryTool, FrontServlet handler) - not built
 
 ## Open in Eclipse - see docs/ECLIPSE_SETUP.md (new Dynamic Web Project + Tomcat 5.5 test). Quick alternative:
