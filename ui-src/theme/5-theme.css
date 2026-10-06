@@ -1,0 +1,33 @@
+/* =====================================================================================
+   NEW STYLES (this file is joined AFTER every older rule, so a rule here wins over an old one)
+   Put your changes here, page by page, under the page's heading below. Rules:
+   - Start every selector with the page root class so nothing leaks to other pages.
+   - Change colours, spacing, fonts here. Do not rename classes or ids, do not change the .js files for looks only.
+   - Save, then press F5 in the preview page. When finished, run the build script (see the UI developer guide).
+   ===================================================================================== */
+
+/* ---------- EVERYTHING (header, menu, buttons, cards, popups) ---------- */
+/* examples:  body .top-header { ... }   .cd-chapter-nav { ... }   .cd-surface { ... }   .cd-modal { ... } */
+
+
+/* ---------- OVERVIEW        root: .cd-overview-chapter ---------- */
+/* map card .map-card, KPI cards .stat-card, circles .tva-circle, risk section .cd-risk-*, mandal cards .cd-ov-mcard */
+
+
+/* ---------- LOANS GIVEN     root: .cd-chapter--loan-journey ---------- */
+/* KPI tiles .cd-loan-kpi-chevron, ranked list .cd-cv-top-row, status .cd-lg-status, cards .cd-project-card / .cd-activity-card / .cd-social-chevron-wrapper */
+
+
+/* ---------- REPAYMENT & PAYMENTS   root: .cd-chapter--repayment-journey ---------- */
+/* KPI cards .cd-repay-kpi-card, channel card .cd-rp-col-channels, ranked list .cd-rp-rankcard, women cards .cd-wm-card */
+
+
+/* ---------- EMPLOYEE PERFORMANCE   root: .cd-chapter--performance-map ---------- */
+/* cards .cd-em-card, map .cd-em-mapcard, leagues .cd-rp-half, hierarchy .cd-hv-* */
+
+
+/* ---------- CALENDAR        root: .cd-chapter--calendar ---------- */
+/* heatmap .cd-cal-*, attention list .cd-cal-attn-*, KPI .cd-cal-kpi */
+
+
+/* ---------- CUSTOM EXCEL BUTTON AND PANEL   roots: .cd-cx-fab, .cd-cx-panel ---------- */
