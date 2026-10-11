@@ -79,7 +79,7 @@ The dashboard never depends on overdue: every overdue part is optional and hides
 
 | `-D` option | Meaning | Default |
 |---|---|---|
-| `ceo.dash.statusTable` | table the overdue figures are read from | `SN.SHG_MEMBER_LOAN_STATUS_NEW` |
+| `ceo.dash.statusTable` | no longer used: the overdue procedures P19, P20 and P21 read `SN.SHG_MEMBER_LOAN_STATUS_NEW`; to use another table, edit those three | - |
 | `ceo.dash.overdue` | `false` = do not read overdue at all (the rest of the dashboard is unchanged) | `true` |
 
 ## How overdue is defined (so the figures can be explained)
